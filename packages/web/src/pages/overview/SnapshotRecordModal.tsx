@@ -7,9 +7,11 @@ import {
   AssetItem,
   CashAsset,
   BankAsset,
+  BankAccountType,
   SecuritiesAsset,
   CryptoAsset,
   PaymentAsset,
+  PaymentPlatform,
   SecurityType,
 } from '@asset-tracker/shared';
 import {
@@ -427,6 +429,10 @@ type CurrencyCatalogItem = {
   names?: string[];
 };
 
+type CurrencyAsset = CashAsset | BankAsset | SecuritiesAsset | PaymentAsset;
+
+const hasCurrency = (asset: AssetItem): asset is CurrencyAsset => asset.type !== 'crypto';
+
 const AssetItemForm: React.FC<AssetItemFormProps> = ({
   item,
   baseCurrency,
@@ -437,17 +443,23 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
   const [currencyCatalog, setCurrencyCatalog] = useState<CurrencyCatalogItem[] | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
+  const currencyValue = hasCurrency(item) ? item.currency : '';
   const currencyOptions = CURRENCIES.map((c: CurrencyInfo) => ({
     value: c.code,
     label: `${c.code} ${c.nameZh}`,
   }));
   const knownCurrencyCodes = CURRENCIES.map((c: CurrencyInfo) => c.code);
-  const isCustomCurrency = item.currency && !knownCurrencyCodes.includes(item.currency);
-  const [customCurrency, setCustomCurrency] = useState(isCustomCurrency ? item.currency : '');
+  const isCustomCurrency = Boolean(currencyValue && !knownCurrencyCodes.includes(currencyValue));
+  const [customCurrency, setCustomCurrency] = useState(isCustomCurrency ? currencyValue : '');
   const [isCustomSelected, setIsCustomSelected] = useState(Boolean(isCustomCurrency));
   const [isComposing, setIsComposing] = useState(false);
 
   useEffect(() => {
+    if (!hasCurrency(item)) {
+      setCustomCurrency('');
+      setIsCustomSelected(false);
+      return;
+    }
     if (isCustomCurrency) {
       setCustomCurrency(item.currency || '');
       setIsCustomSelected(true);
@@ -455,7 +467,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
       setCustomCurrency('');
       setIsCustomSelected(false);
     }
-  }, [item.currency]);
+  }, [currencyValue]);
 
   const loadCurrencyCatalog = async () => {
     if (currencyCatalog || catalogLoading) {
@@ -592,6 +604,9 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
   };
 
   const handleCurrencyChange = async (currency: string) => {
+    if (!hasCurrency(item)) {
+      return;
+    }
     if (currency === CUSTOM_CURRENCY_VALUE) {
       setIsCustomSelected(true);
       onChange({ currency: customCurrency || '' });
@@ -614,6 +629,9 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
   };
 
   const applyResolvedCurrency = async (rawValue: string) => {
+    if (!hasCurrency(item)) {
+      return;
+    }
     const nextCurrency = resolveCurrencyCode(rawValue);
     onChange({ currency: nextCurrency });
 
@@ -678,7 +696,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
       <div className="grid grid-cols-2 gap-3">
         <Select
           label="币种"
-          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : item.currency}
+          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : currencyValue}
           onChange={(e) => handleCurrencyChange(e.target.value)}
           options={[...currencyOptions, { value: CUSTOM_CURRENCY_VALUE, label: '自定义' }]}
         />
@@ -743,7 +761,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
           placeholder="0"
         />
         <Input
-          label={`汇率 (${item.currency} → ${baseCurrency})`}
+          label={`汇率 (${currencyValue} → ${baseCurrency})`}
           type="number"
           value={item.exchangeRate}
           onChange={(e) => onChange({ exchangeRate: Number(e.target.value) })}
@@ -769,7 +787,12 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
         <Select
           label="账户类型"
           value={item.accountType}
-          onChange={(e) => onChange({ accountType: e.target.value })}
+          onChange={(e) => {
+            const next = e.target.value as BankAccountType;
+            if (next === 'current' || next === 'fixed') {
+              onChange({ accountType: next });
+            }
+          }}
           options={[
             { value: 'current', label: '活期' },
             { value: 'fixed', label: '定期' },
@@ -777,7 +800,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
         />
         <Select
           label="币种"
-          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : item.currency}
+          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : currencyValue}
           onChange={(e) => handleCurrencyChange(e.target.value)}
           options={[...currencyOptions, { value: CUSTOM_CURRENCY_VALUE, label: '自定义' }]}
         />
@@ -842,7 +865,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
           placeholder="0"
         />
         <Input
-          label={`汇率 (${item.currency} → ${baseCurrency})`}
+          label={`汇率 (${currencyValue} → ${baseCurrency})`}
           type="number"
           value={item.exchangeRate}
           onChange={(e) => onChange({ exchangeRate: Number(e.target.value) })}
@@ -878,7 +901,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
         />
         <Select
           label="币种"
-          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : item.currency}
+          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : currencyValue}
           onChange={(e) => handleCurrencyChange(e.target.value)}
           options={[...currencyOptions, { value: CUSTOM_CURRENCY_VALUE, label: '自定义' }]}
         />
@@ -943,7 +966,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
           placeholder="0"
         />
         <Input
-          label={`汇率 (${item.currency} → ${baseCurrency})`}
+          label={`汇率 (${currencyValue} → ${baseCurrency})`}
           type="number"
           value={item.exchangeRate}
           onChange={(e) => onChange({ exchangeRate: Number(e.target.value) })}
@@ -1011,7 +1034,12 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
         <Select
           label="支付平台"
           value={item.paymentType}
-          onChange={(e) => onChange({ paymentType: e.target.value })}
+          onChange={(e) => {
+            const next = e.target.value as PaymentPlatform;
+            if (next === 'wechat' || next === 'alipay' || next === 'paylah') {
+              onChange({ paymentType: next });
+            }
+          }}
           options={[
             { value: 'wechat', label: '微信' },
             { value: 'alipay', label: '支付宝' },
@@ -1020,7 +1048,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
         />
         <Select
           label="币种"
-          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : item.currency}
+          value={isCustomSelected ? CUSTOM_CURRENCY_VALUE : currencyValue}
           onChange={(e) => handleCurrencyChange(e.target.value)}
           options={[...currencyOptions, { value: CUSTOM_CURRENCY_VALUE, label: '自定义' }]}
         />
@@ -1085,7 +1113,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
           placeholder="0"
         />
         <Input
-          label={`汇率 (${item.currency} → ${baseCurrency})`}
+          label={`汇率 (${currencyValue} → ${baseCurrency})`}
           type="number"
           value={item.exchangeRate}
           onChange={(e) => onChange({ exchangeRate: Number(e.target.value) })}
