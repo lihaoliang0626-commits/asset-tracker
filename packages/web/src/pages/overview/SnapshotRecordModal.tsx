@@ -90,7 +90,7 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
   };
 
   // 更新资产项
-  const updateAssetItem = (groupType: AssetType, itemId: string, updates: Partial<AssetItem>) => {
+  const updateAssetItem = (groupType: AssetType, itemId: string, updates: AssetItemUpdate) => {
     setAssets((prev: AssetGroup[]) =>
       prev.map((group: AssetGroup) =>
         group.type === groupType
@@ -98,7 +98,7 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
               ...group,
               items: group.items.map((item: AssetItem) =>
                 item.id === itemId
-                  ? normalizeAssetValue({ ...item, ...updates }, baseCurrency)
+                  ? normalizeAssetValue({ ...item, ...updates, type: item.type } as AssetItem, baseCurrency)
                   : item
               ),
             }
@@ -416,7 +416,7 @@ interface AssetItemFormProps {
   baseCurrency: string;
   exchangeRateMode: 'auto' | 'manual';
   onAutoRate: (fromCurrency: string, toCurrency: string) => Promise<number>;
-  onChange: (updates: Partial<AssetItem>) => void;
+  onChange: (updates: AssetItemUpdate) => void;
 }
 
 const CUSTOM_CURRENCY_VALUE = '__custom__';
@@ -429,6 +429,12 @@ type CurrencyCatalogItem = {
   names?: string[];
 };
 
+type AssetItemUpdate =
+  | Partial<CashAsset>
+  | Partial<BankAsset>
+  | Partial<SecuritiesAsset>
+  | Partial<CryptoAsset>
+  | Partial<PaymentAsset>;
 type CurrencyAsset = CashAsset | BankAsset | SecuritiesAsset | PaymentAsset;
 
 const hasCurrency = (asset: AssetItem): asset is CurrencyAsset => asset.type !== 'crypto';
@@ -448,7 +454,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
     value: c.code,
     label: `${c.code} ${c.nameZh}`,
   }));
-  const knownCurrencyCodes = CURRENCIES.map((c: CurrencyInfo) => c.code);
+  const knownCurrencyCodes: string[] = CURRENCIES.map((c: CurrencyInfo) => c.code);
   const isCustomCurrency = Boolean(currencyValue && !knownCurrencyCodes.includes(currencyValue));
   const [customCurrency, setCustomCurrency] = useState(isCustomCurrency ? currencyValue : '');
   const [isCustomSelected, setIsCustomSelected] = useState(Boolean(isCustomCurrency));
