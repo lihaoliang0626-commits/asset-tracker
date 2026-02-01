@@ -1,0 +1,7 @@
+[build]
+  base = "packages/web"
+  command = "pnpm install --frozen-lockfile && pnpm build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "18"
