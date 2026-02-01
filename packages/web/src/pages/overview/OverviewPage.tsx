@@ -4,7 +4,7 @@ import { useSnapshotStore, useAnalyticsStore } from '../../stores';
 import { Card, NumberDisplay, Button } from '../../components/base';
 import { LineChart, DonutChart } from '../../components/charts';
 import { Header } from '../../components/layout';
-import { formatDate } from '@asset-tracker/shared';
+import { formatDate, AssetGroup } from '@asset-tracker/shared';
 import { SnapshotRecordModal } from './SnapshotRecordModal';
 
 const USER_ID = 'default'; // 临时使用默认用户ID
@@ -48,7 +48,7 @@ export const OverviewPage: React.FC = () => {
 
   // 准备趋势图数据
   const chartData = trendData
-    ? trendData.timestamps.map((timestamp, index) => ({
+    ? trendData.timestamps.map((timestamp: number, index: number) => ({
         timestamp,
         value: trendData.values[index],
       }))
@@ -56,7 +56,7 @@ export const OverviewPage: React.FC = () => {
 
   // 准备结构图数据
   const structureData = currentSnapshot
-    ? currentSnapshot.assets.map(group => ({
+    ? currentSnapshot.assets.map((group: AssetGroup) => ({
         name: getAssetTypeName(group.type),
         value: group.totalValue,
         percentage: group.percentage,
@@ -167,7 +167,7 @@ export const OverviewPage: React.FC = () => {
         <Card title="资产类型">
           <div className="space-y-2">
             {assetGroups.length > 0 ? (
-              assetGroups.map(group => (
+              assetGroups.map((group: AssetGroup) => (
                 <AssetListItem
                   key={group.type}
                   label={getAssetTypeName(group.type)}

@@ -3,7 +3,7 @@ import { useAnalyticsStore, useSnapshotStore, useSettingsStore } from '../../sto
 import { Card, Button } from '../../components/base';
 import { LineChart, BarChart, DonutChart } from '../../components/charts';
 import { Header } from '../../components/layout';
-import { formatDate, AnalysisPeriod } from '@asset-tracker/shared';
+import { formatDate, AnalysisPeriod, ContributionAnalysis, StructureComparison, Snapshot } from '@asset-tracker/shared';
 import { generateAssetSummary, AssetSummaryResult } from '../../utils/ai-summary';
 
 const USER_ID = 'default';
@@ -47,20 +47,20 @@ export const AnalyticsPage: React.FC = () => {
 
   // 准备趋势图数据
   const chartData = trendData
-    ? trendData.timestamps.map((timestamp, index) => ({
+    ? trendData.timestamps.map((timestamp: number, index: number) => ({
         timestamp,
         value: trendData.values[index],
       }))
     : [];
 
   // 准备贡献分析数据
-  const contributionData = contributions.map(c => ({
+  const contributionData = contributions.map((c: ContributionAnalysis) => ({
     name: getAssetTypeName(c.assetType),
     value: c.change,
   }));
 
   // 准备当前结构数据
-  const currentStructureData = structureComparison?.current.map(item => ({
+  const currentStructureData = structureComparison?.current.map((item: StructureComparison['current'][number]) => ({
     name: getAssetTypeName(item.assetType),
     value: item.value,
     percentage: item.percentage,
@@ -68,8 +68,8 @@ export const AnalyticsPage: React.FC = () => {
 
   // 准备对比数据
   const comparisonData = structureComparison
-    ? structureComparison.current.map(item => {
-        const previous = structureComparison.previous.find(p => p.assetType === item.assetType);
+    ? structureComparison.current.map((item: StructureComparison['current'][number]) => {
+        const previous = structureComparison.previous.find((p: StructureComparison['previous'][number]) => p.assetType === item.assetType);
         return {
           name: getAssetTypeName(item.assetType),
           current: item.percentage,
@@ -89,9 +89,9 @@ export const AnalyticsPage: React.FC = () => {
     : null;
 
   const recentNotes = snapshots
-    .filter(s => s.note)
+    .filter((s: Snapshot) => s.note)
     .slice(0, 5)
-    .map(s => ({
+    .map((s: Snapshot) => ({
       date: formatDate(s.timestamp, 'short'),
       note: s.note || '',
     }));
@@ -163,7 +163,7 @@ export const AnalyticsPage: React.FC = () => {
             <div>
               <h4 className="text-sm font-medium text-[#1F2933] mb-3">分析周期</h4>
               <div className="flex gap-2">
-                {(['week', 'month', 'quarter'] as AnalysisPeriod[]).map(period => (
+                {(['week', 'month', 'quarter'] as AnalysisPeriod[]).map((period: AnalysisPeriod) => (
                   <button
                     key={period}
                     onClick={() => handlePeriodChange(period)}
@@ -309,7 +309,7 @@ export const AnalyticsPage: React.FC = () => {
                 showLegend={false}
               />
               <div className="space-y-3">
-                {currentStructureData.map((item, index) => (
+                {currentStructureData.map((item: { name: string; value: number; percentage: number }, index: number) => (
                   <div
                     key={index}
                     className="flex items-center justify-between p-3 rounded-lg bg-[#F6F7F9]"
@@ -346,7 +346,7 @@ export const AnalyticsPage: React.FC = () => {
         <Card title="结构变化对比">
           {comparisonData.length > 0 ? (
             <div className="space-y-4">
-              {comparisonData.map((item, index) => {
+              {comparisonData.map((item: { name: string; current: number; previous: number }, index: number) => {
                 const change = item.current - item.previous;
                 return (
                   <div key={index} className="space-y-2">
@@ -405,9 +405,9 @@ export const AnalyticsPage: React.FC = () => {
           {snapshots.length > 0 ? (
             <div className="space-y-3">
               {snapshots
-                .filter(s => s.note)
+                .filter((s: Snapshot) => s.note)
                 .slice(0, 5)
-                .map(snapshot => (
+                .map((snapshot: Snapshot) => (
                   <div
                     key={snapshot.id}
                     className="p-3 bg-[#F6F7F9] rounded-lg hover:bg-[#E5E7EB] transition-colors"

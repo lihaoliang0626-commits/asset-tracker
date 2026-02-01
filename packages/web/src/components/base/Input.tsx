@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '../../utils/cn';
 import { Input as ShadcnInput } from '../ui/input';
 
-export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'prefix' | 'suffix'> {
   label?: string;
   error?: string;
   prefix?: React.ReactNode;

@@ -1,12 +1,10 @@
 import { create } from 'zustand';
 import {
-  AnalyticsPeriod,
-  AnalyticsResult,
+  AnalysisPeriod,
   TrendData,
   ContributionAnalysis,
   StructureComparison,
   AssetChange,
-  Snapshot,
 } from '@asset-tracker/shared';
 import {
   buildTrendData,

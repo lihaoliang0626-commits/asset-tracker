@@ -4,6 +4,7 @@ import { useSnapshotStore, useSettingsStore, useExchangeRateStore } from '../../
 import {
   AssetGroup,
   AssetType,
+  AssetItem,
   CashAsset,
   BankAsset,
   SecuritiesAsset,
@@ -18,6 +19,7 @@ import {
   formatCurrency,
   formatDateKey,
   generateId,
+  CurrencyInfo,
 } from '@asset-tracker/shared';
 
 const USER_ID = 'default';
@@ -65,11 +67,11 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
   const addAssetItem = (type: AssetType) => {
     const newItem = createEmptyAssetItem(type, baseCurrency);
 
-    setAssets(prev => {
-      const existingGroup = prev.find(g => g.type === type);
+    setAssets((prev: AssetGroup[]) => {
+      const existingGroup = prev.find((g: AssetGroup) => g.type === type);
 
       if (existingGroup) {
-        return prev.map(g =>
+        return prev.map((g: AssetGroup) =>
           g.type === type
             ? { ...g, items: [...g.items, newItem] }
             : g
@@ -86,13 +88,13 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
   };
 
   // 更新资产项
-  const updateAssetItem = (groupType: AssetType, itemId: string, updates: any) => {
-    setAssets(prev =>
-      prev.map(group =>
+  const updateAssetItem = (groupType: AssetType, itemId: string, updates: Partial<AssetItem>) => {
+    setAssets((prev: AssetGroup[]) =>
+      prev.map((group: AssetGroup) =>
         group.type === groupType
           ? {
               ...group,
-              items: group.items.map(item =>
+              items: group.items.map((item: AssetItem) =>
                 item.id === itemId
                   ? normalizeAssetValue({ ...item, ...updates }, baseCurrency)
                   : item
@@ -222,15 +224,15 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
 
   // 删除资产项
   const deleteAssetItem = (groupType: AssetType, itemId: string) => {
-    setAssets(prev =>
-      prev.map(group =>
+    setAssets((prev: AssetGroup[]) =>
+      prev.map((group: AssetGroup) =>
         group.type === groupType
           ? {
               ...group,
-              items: group.items.filter(item => item.id !== itemId),
+              items: group.items.filter((item: AssetItem) => item.id !== itemId),
             }
           : group
-      ).filter(group => group.items.length > 0)
+      ).filter((group: AssetGroup) => group.items.length > 0)
     );
   };
 
@@ -361,8 +363,8 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
 
           {/* 资产列表 */}
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {assets.map(group =>
-              group.items.map(item => (
+            {assets.map((group: AssetGroup) =>
+              group.items.map((item: AssetItem) => (
                 <Card key={item.id} className="relative">
                   <button
                     onClick={() => deleteAssetItem(group.type, item.id)}
@@ -408,11 +410,11 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
 
 // 资产项表单组件
 interface AssetItemFormProps {
-  item: any;
+  item: AssetItem;
   baseCurrency: string;
   exchangeRateMode: 'auto' | 'manual';
   onAutoRate: (fromCurrency: string, toCurrency: string) => Promise<number>;
-  onChange: (updates: any) => void;
+  onChange: (updates: Partial<AssetItem>) => void;
 }
 
 const CUSTOM_CURRENCY_VALUE = '__custom__';
@@ -435,11 +437,11 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
   const [currencyCatalog, setCurrencyCatalog] = useState<CurrencyCatalogItem[] | null>(null);
   const [catalogLoading, setCatalogLoading] = useState(false);
   const [catalogError, setCatalogError] = useState<string | null>(null);
-  const currencyOptions = CURRENCIES.map(c => ({
+  const currencyOptions = CURRENCIES.map((c: CurrencyInfo) => ({
     value: c.code,
     label: `${c.code} ${c.nameZh}`,
   }));
-  const knownCurrencyCodes = CURRENCIES.map(c => c.code);
+  const knownCurrencyCodes = CURRENCIES.map((c: CurrencyInfo) => c.code);
   const isCustomCurrency = item.currency && !knownCurrencyCodes.includes(item.currency);
   const [customCurrency, setCustomCurrency] = useState(isCustomCurrency ? item.currency : '');
   const [isCustomSelected, setIsCustomSelected] = useState(Boolean(isCustomCurrency));
@@ -470,7 +472,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
       return Array.from(names);
     };
 
-    const localCatalog: CurrencyCatalogItem[] = CURRENCIES.map(c => {
+    const localCatalog: CurrencyCatalogItem[] = CURRENCIES.map((c: CurrencyInfo) => {
       const item: CurrencyCatalogItem = {
         code: c.code,
         name: c.name,
@@ -544,12 +546,12 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
       return trimmed;
     }
     const upper = trimmed.toUpperCase();
-    const matchedByCode = CURRENCIES.find(c => c.code === upper);
+    const matchedByCode = CURRENCIES.find((c: CurrencyInfo) => c.code === upper);
     if (matchedByCode) {
       return matchedByCode.code;
     }
     const lower = trimmed.toLowerCase();
-    const catalog = currencyCatalog ?? CURRENCIES.map(c => ({
+    const catalog = currencyCatalog ?? CURRENCIES.map((c: CurrencyInfo) => ({
       code: c.code,
       name: c.name,
       nameZh: c.nameZh,
@@ -557,32 +559,32 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
       names: [c.name, c.nameZh, ...(CURRENCY_ALIASES[c.code] || [])].filter(Boolean) as string[],
     }));
 
-    const matchedExact = catalog.find((c) =>
+    const matchedExact = catalog.find((c: CurrencyCatalogItem) =>
       c.code === upper
       || c.nameZh === trimmed
       || c.name === trimmed
-      || (c.names || []).some(name => name === trimmed)
+      || (c.names || []).some((name: string) => name === trimmed)
     );
     if (matchedExact) {
       return matchedExact.code;
     }
 
-    const aliasMatch = catalog.find(entry =>
-      (entry.aliases || []).some(alias => trimmed.includes(alias))
+    const aliasMatch = catalog.find((entry: CurrencyCatalogItem) =>
+      (entry.aliases || []).some((alias: string) => trimmed.includes(alias))
     );
     if (aliasMatch) {
       return aliasMatch.code;
     }
 
-    const fuzzyMatches = catalog.filter((c) => {
+    const fuzzyMatches = catalog.filter((c: CurrencyCatalogItem) => {
       const names = c.names || [c.name, c.nameZh].filter(Boolean) as string[];
-      return names.some((name) => {
+      return names.some((name: string) => {
         const lowerName = name.toLowerCase();
         return lowerName.includes(lower) || lower.includes(lowerName);
       });
     });
     if (fuzzyMatches.length > 0) {
-      const best = fuzzyMatches.sort((a, b) => (a.nameZh || a.name).length - (b.nameZh || b.name).length)[0];
+      const best = fuzzyMatches.sort((a: CurrencyCatalogItem, b: CurrencyCatalogItem) => (a.nameZh || a.name).length - (b.nameZh || b.name).length)[0];
       return best.code;
     }
 
@@ -643,18 +645,21 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
     }
     const lower = trimmed.toLowerCase();
     const catalog = currencyCatalog ?? [];
-    const scored = catalog.map((item) => {
+    const scored = catalog.map((item: CurrencyCatalogItem) => {
       let score = 0;
       if (item.code === trimmed.toUpperCase()) score += 100;
       if (item.code.startsWith(trimmed.toUpperCase())) score += 50;
       if (item.nameZh && item.nameZh.includes(trimmed)) score += 40;
       if (item.name.toLowerCase().includes(lower)) score += 30;
-      if ((item.aliases || []).some(alias => alias.includes(trimmed))) score += 35;
-      if ((item.names || []).some(name => name.toLowerCase().includes(lower))) score += 25;
+      if ((item.aliases || []).some((alias: string) => alias.includes(trimmed))) score += 35;
+      if ((item.names || []).some((name: string) => name.toLowerCase().includes(lower))) score += 25;
       return { item, score };
-    }).filter(entry => entry.score > 0);
+    }).filter((entry: { item: CurrencyCatalogItem; score: number }) => entry.score > 0);
 
-    return scored.sort((a, b) => b.score - a.score).slice(0, 6).map(entry => entry.item);
+    return scored
+      .sort((a: { item: CurrencyCatalogItem; score: number }, b: { item: CurrencyCatalogItem; score: number }) => b.score - a.score)
+      .slice(0, 6)
+      .map((entry: { item: CurrencyCatalogItem; score: number }) => entry.item);
   };
 
   const renderBaseConversion = (valueInBase?: number) => {
@@ -1098,7 +1103,7 @@ const AssetItemForm: React.FC<AssetItemFormProps> = ({
 };
 
 // 创建空资产项
-function createEmptyAssetItem(type: AssetType, baseCurrency: string): any {
+function createEmptyAssetItem(type: AssetType, baseCurrency: string): AssetItem {
   const baseItem = {
     id: generateId('asset'),
     type,
@@ -1155,11 +1160,11 @@ function createEmptyAssetItem(type: AssetType, baseCurrency: string): any {
       } as PaymentAsset;
 
     default:
-      return baseItem;
+      return baseItem as AssetItem;
   }
 }
 
-function normalizeAssetValue(item: any, baseCurrency: string): any {
+function normalizeAssetValue(item: AssetItem, baseCurrency: string): AssetItem {
   if (item.type === 'cash') {
     const exchangeRate = item.currency === baseCurrency ? 1 : Number(item.exchangeRate) || 1;
     const amount = Number(item.amount) || 0;

@@ -85,8 +85,8 @@ export const useExchangeRateStore = create<ExchangeRateState>((set, get) => ({
     try {
       const saved = await storage.save(rate);
 
-      set(state => ({
-        rates: [...state.rates.filter(r => !(r.fromCurrency === saved.fromCurrency && r.toCurrency === saved.toCurrency)), saved],
+      set((state: ExchangeRateState) => ({
+        rates: [...state.rates.filter((r: ExchangeRate) => !(r.fromCurrency === saved.fromCurrency && r.toCurrency === saved.toCurrency)), saved],
         isLoading: false,
       }));
     } catch (error) {
@@ -105,11 +105,11 @@ export const useExchangeRateStore = create<ExchangeRateState>((set, get) => ({
     try {
       const saved = await storage.saveMany(rates);
 
-      set(state => {
+      set((state: ExchangeRateState) => {
         // 移除旧的同货币对汇率
-        const filtered = state.rates.filter(existing =>
+        const filtered = state.rates.filter((existing: ExchangeRate) =>
           !saved.some(
-            s => s.fromCurrency === existing.fromCurrency && s.toCurrency === existing.toCurrency
+            (s: ExchangeRate) => s.fromCurrency === existing.fromCurrency && s.toCurrency === existing.toCurrency
           )
         );
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSettingsStore, useSnapshotStore, useExchangeRateStore, useAnalyticsStore } from '../../stores';
 import { Card, Button, Select, Input, Modal } from '../../components/base';
 import { Header } from '../../components/layout';
-import { CURRENCIES, exportAllData } from '@asset-tracker/shared';
+import { CURRENCIES, exportAllData, formatDate, CurrencyInfo, Snapshot } from '@asset-tracker/shared';
 
 const USER_ID = 'default';
 
@@ -104,7 +104,7 @@ export const SettingsPage: React.FC = () => {
               label="基准货币"
               value={settings.baseCurrency}
               onChange={(e) => updateBaseCurrency(USER_ID, e.target.value)}
-              options={CURRENCIES.map(c => ({
+              options={CURRENCIES.map((c: CurrencyInfo) => ({
                 value: c.code,
                 label: `${c.symbol} ${c.nameZh} (${c.code})`,
               }))}
@@ -408,7 +408,7 @@ export const SettingsPage: React.FC = () => {
       >
         {snapshots.length > 0 ? (
           <div className="space-y-3">
-            {snapshots.map(snapshot => (
+            {snapshots.map((snapshot: Snapshot) => (
               <div
                 key={snapshot.id}
                 className="p-3 bg-[#F6F7F9] rounded-lg hover:bg-[#E5E7EB] transition-colors"

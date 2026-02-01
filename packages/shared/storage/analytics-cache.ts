@@ -1,4 +1,4 @@
-import { AnalyticsCache, AnalyticsPeriod, TrendData, ContributionAnalysis, StructureComparison } from '../types';
+import { AnalyticsCache, AnalysisPeriod, TrendData, ContributionAnalysis, StructureComparison } from '../types';
 import { DBStore, STORES } from './db';
 import { generateId } from '../utils/date';
 
@@ -31,7 +31,7 @@ export class AnalyticsCacheStorage {
    */
   async get(
     userId: string,
-    period: AnalyticsPeriod,
+    period: AnalysisPeriod,
     startTime: number,
     endTime: number
   ): Promise<AnalyticsCache | null> {
@@ -98,7 +98,7 @@ export class AnalyticsCacheStorage {
    */
   async refresh(
     userId: string,
-    period: AnalyticsPeriod,
+    period: AnalysisPeriod,
     startTime: number,
     endTime: number
   ): Promise<AnalyticsCache | null> {

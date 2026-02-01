@@ -1,6 +1,6 @@
 [build]
   base = "packages/web"
-  command = "pnpm install --frozen-lockfile && pnpm build"
+  command = "pnpm install --frozen-lockfile && pnpm -C ../shared build && pnpm build"
   publish = "dist"
 
 [build.environment]

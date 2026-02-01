@@ -3,9 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "main": "./index.ts",
-  "types": "./index.ts",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "build": "tsc -p tsconfig.json"
   },
   "devDependencies": {
     "typescript": "^5.3.3"
