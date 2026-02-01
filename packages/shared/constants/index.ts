@@ -5,18 +5,18 @@ export { CURRENCY_ALIASES } from './currency-aliases';
  * Supported currencies
  */
 export const SUPPORTED_CURRENCIES: CurrencyInfo[] = [
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥', nameZh: '人民币' },
+  { code: 'USD', name: 'US Dollar', symbol: '$', nameZh: '美元' },
+  { code: 'HKD', name: 'Hong Kong Dollar', symbol: 'HK$', nameZh: '港币' },
+  { code: 'EUR', name: 'Euro', symbol: '€', nameZh: '欧元' },
+  { code: 'GBP', name: 'British Pound', symbol: '£', nameZh: '英镑' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥', nameZh: '日元' },
+  { code: 'SGD', name: 'Singapore Dollar', symbol: 'S$', nameZh: '新加坡元' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$', nameZh: '澳元' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$', nameZh: '加元' },
+  { code: 'MYR', name: 'Malaysian Ringgit', symbol: 'RM', nameZh: '马来西亚令吉' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹', nameZh: '印度卢比' },
+  { code: 'VND', name: 'Vietnamese Dong', symbol: '₫', nameZh: '越南盾' },
 ];
 
 /**

@@ -18,7 +18,7 @@ export const STORES = {
  */
 export interface StoreConfig {
   name: string;
-  keyPath: string;
+  keyPath: string | string[];
   autoIncrement?: boolean;
   indexes?: {
     name: string;
