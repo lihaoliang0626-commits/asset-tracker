@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { UserSettings, AppPreferences, AssetType } from '@asset-tracker/shared';
+import { UserSettings, AppPreferences, AssetType, AssetAllocationTarget } from '@asset-tracker/shared';
 import { getSettingsStorage, getPreferencesStorage } from '@asset-tracker/shared';
 
 /**
@@ -26,6 +26,7 @@ interface SettingsState {
   toggleAssetType: (userId: string, assetType: AssetType, enabled: boolean) => Promise<void>;
   addAdvancedCategory: (userId: string, category: string) => Promise<void>;
   removeAdvancedCategory: (userId: string, category: string) => Promise<void>;
+  updateAllocationTarget: (userId: string, target: AssetAllocationTarget) => Promise<void>;
   resetSettings: (userId: string) => Promise<void>;
 
   // Actions - 应用偏好设置
@@ -208,6 +209,22 @@ export const useSettingsStore = create<SettingsState>()(
         } catch (error) {
           set({
             error: error instanceof Error ? error.message : 'Failed to remove advanced category',
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      // 更新资产配置目标
+      updateAllocationTarget: async (userId: string, target: AssetAllocationTarget) => {
+        set({ isLoading: true, error: null });
+
+        try {
+          const settings = await settingsStorage.updateAllocationTarget(userId, target);
+          set({ settings, isLoading: false });
+        } catch (error) {
+          set({
+            error: error instanceof Error ? error.message : 'Failed to update allocation target',
             isLoading: false,
           });
           throw error;

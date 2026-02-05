@@ -10,10 +10,12 @@ import {
 export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
-  title?: string;
+  title?: string | React.ReactNode;
+  headerAside?: React.ReactNode;
   children: React.ReactNode;
   footer?: React.ReactNode;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  disableAutoFocus?: boolean;
 }
 
 /**
@@ -23,9 +25,11 @@ export const Modal: React.FC<ModalProps> = ({
   isOpen,
   onClose,
   title,
+  headerAside,
   children,
   footer,
   size = 'md',
+  disableAutoFocus = false,
 }) => {
   const sizes = {
     sm: 'max-w-md',
@@ -35,10 +39,28 @@ export const Modal: React.FC<ModalProps> = ({
   };
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className={sizes[size]}>
+      <DialogContent
+        className={sizes[size]}
+        onOpenAutoFocus={(event) => {
+          if (disableAutoFocus) {
+            event.preventDefault();
+          }
+        }}
+      >
         {title && (
           <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+            <div className="flex items-start justify-between gap-4">
+              {typeof title === 'string' ? (
+                <DialogTitle>{title}</DialogTitle>
+              ) : (
+                title
+              )}
+              {headerAside && (
+                <div className="pr-8 pt-1">
+                  {headerAside}
+                </div>
+              )}
+            </div>
           </DialogHeader>
         )}
         <div className="max-h-[70vh] overflow-y-auto">{children}</div>

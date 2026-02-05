@@ -1,5 +1,6 @@
 import { CurrencyCode } from './exchange';
 import { AssetType } from './asset';
+import { AssetAllocationTarget } from './allocation';
 
 /**
  * User settings type definition
@@ -15,6 +16,7 @@ export interface UserSettings {
   enableAIAnalysis: boolean;     // 是否启用AI分析
   dataBackupEnabled: boolean;    // 是否启用数据备份
   lastBackupDate?: number;       // 最后备份时间
+  allocationTarget?: AssetAllocationTarget; // 资产配置目标
   createdAt: number;             // 创建时间
   updatedAt: number;             // 更新时间
 }

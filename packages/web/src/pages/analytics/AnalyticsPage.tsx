@@ -1,9 +1,21 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useAnalyticsStore, useSnapshotStore, useSettingsStore } from '../../stores';
+import { useAnalyticsStore, useSnapshotStore, useSettingsStore, useGoalStore } from '../../stores';
 import { Card, Button } from '../../components/base';
 import { LineChart, BarChart, DonutChart } from '../../components/charts';
+import { GoalTrendChart } from '../../components/goal';
+import { AllocationComparisonCard } from '../../components/allocation';
 import { Header } from '../../components/layout';
-import { formatDate, AnalysisPeriod, ContributionAnalysis, StructureComparison, Snapshot } from '@asset-tracker/shared';
+import {
+  formatDate,
+  formatCurrency,
+  AnalysisPeriod,
+  ContributionAnalysis,
+  StructureComparison,
+  Snapshot,
+  calculateCurrentAllocation,
+  generateAllocationComparison,
+} from '@asset-tracker/shared';
+import { getGoalStatus, formatGoalAmount, formatGoalMonth } from '@asset-tracker/shared';
 import { generateAssetSummary, AssetSummaryResult } from '../../utils/ai-summary';
 
 const USER_ID = 'default';
@@ -27,8 +39,10 @@ export const AnalyticsPage: React.FC = () => {
   } = useAnalyticsStore();
 
   const { snapshots } = useSnapshotStore();
-  const { settings } = useSettingsStore();
+  const { settings, loadSettings } = useSettingsStore();
+  const { activeGoal, currentProgress } = useGoalStore();
   const [summary, setSummary] = useState<AssetSummaryResult | null>(null);
+  const baseCurrency = settings?.baseCurrency || 'CNY';
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [summaryError, setSummaryError] = useState<string | null>(null);
   const summaryKeyRef = useRef<string | null>(null);
@@ -36,6 +50,7 @@ export const AnalyticsPage: React.FC = () => {
 
   // 加载数据
   useEffect(() => {
+    loadSettings(USER_ID);
     setPeriod(selectedPeriod);
     analyze(USER_ID);
   }, [selectedPeriod]);
@@ -96,6 +111,14 @@ export const AnalyticsPage: React.FC = () => {
       note: s.note || '',
     }));
 
+  // 计算资产配置对比
+  const allocationComparisons = latestSnapshot && settings?.allocationTarget
+    ? generateAllocationComparison(
+        calculateCurrentAllocation(latestSnapshot),
+        settings.allocationTarget
+      )
+    : null;
+
   const handleGenerateSummary = async () => {
     if (!assetChange || contributions.length === 0) {
       setSummaryError('暂无可分析的数据');
@@ -105,7 +128,7 @@ export const AnalyticsPage: React.FC = () => {
     const key = JSON.stringify({
       assetChange,
       contributions,
-      baseCurrency: settings?.baseCurrency,
+      baseCurrency,
     });
     if (summaryKeyRef.current === key && summary) {
       return;
@@ -121,7 +144,7 @@ export const AnalyticsPage: React.FC = () => {
     try {
       const result = await generateAssetSummary(
         {
-          baseCurrency: settings?.baseCurrency || 'CNY',
+          baseCurrency,
           assetChange,
           contributions,
           notes: recentNotes,
@@ -242,6 +265,14 @@ export const AnalyticsPage: React.FC = () => {
           )}
         </Card>
 
+        {/* 资产配置对比 */}
+        {allocationComparisons && (
+          <AllocationComparisonCard
+            comparisons={allocationComparisons}
+            baseCurrency={baseCurrency}
+          />
+        )}
+
         {/* KPI 小卡 */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Card>
@@ -283,12 +314,106 @@ export const AnalyticsPage: React.FC = () => {
           </Card>
         </div>
 
+        {/* 目标进度分析模块 */}
+        {activeGoal && currentProgress && (
+          <Card title="🎯 目标进度分析">
+            <div className="space-y-6">
+              {/* 目标基本信息 */}
+              <div className="bg-[#F6F7F9] p-4 rounded-lg">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="text-base font-medium text-[#1F2933]">
+                    {activeGoal.title}
+                  </h3>
+                  <span className={`text-sm px-2 py-1 rounded ${
+                    getGoalStatus(activeGoal, currentProgress) === 'on_track'
+                      ? 'bg-blue-100 text-blue-700'
+                      : getGoalStatus(activeGoal, currentProgress) === 'achieved'
+                      ? 'bg-blue-100 text-blue-700'
+                      : 'bg-gray-200 text-gray-700'
+                  }`}>
+                    {getGoalStatus(activeGoal, currentProgress) === 'achieved' && '已达成'}
+                    {getGoalStatus(activeGoal, currentProgress) === 'on_track' && '在正轨上'}
+                    {getGoalStatus(activeGoal, currentProgress) === 'behind' && '需努力'}
+                    {getGoalStatus(activeGoal, currentProgress) === 'overdue' && '已过期'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <p className="text-[#6B7280] mb-1">当前进度</p>
+                    <p className="text-lg font-semibold text-[#1F2933]">
+                      {currentProgress.progress.toFixed(1)}%
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#6B7280] mb-1">当前资产</p>
+                    <p className="text-lg font-semibold text-[#1F2933]">
+                      {formatGoalAmount(currentProgress.currentAmount, activeGoal.baseCurrency)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[#6B7280] mb-1">目标金额</p>
+                    <p className="text-lg font-semibold text-[#1F2933]">
+                      {formatGoalAmount(activeGoal.targetAmount, activeGoal.baseCurrency)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* 趋势预测图 */}
+              <div>
+                <h4 className="text-sm font-medium text-[#1F2933] mb-3">目标达成趋势预测</h4>
+                <GoalTrendChart
+                  goal={activeGoal}
+                  progress={currentProgress}
+                  snapshots={snapshots}
+                />
+              </div>
+
+              {/* 预测信息 */}
+              {currentProgress.averageGrowthRate !== 0 && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-[#F6F7F9] p-4 rounded-lg">
+                    <p className="text-xs text-[#6B7280] mb-1">月均增长</p>
+                    <p className="text-base font-semibold text-[#1F2933]">
+                      {currentProgress.averageGrowthRate >= 0 ? '+' : ''}
+                      {formatGoalAmount(currentProgress.averageGrowthRate, activeGoal.baseCurrency)}
+                    </p>
+                  </div>
+                  {currentProgress.predictedAmount && (
+                    <div className="bg-[#F6F7F9] p-4 rounded-lg">
+                      <p className="text-xs text-[#6B7280] mb-1">预计到期金额</p>
+                      <p className="text-base font-semibold text-[#1F2933]">
+                        {formatGoalAmount(currentProgress.predictedAmount, activeGoal.baseCurrency)}
+                      </p>
+                    </div>
+                  )}
+                  {currentProgress.predictedDate && (
+                    <div className="bg-[#F6F7F9] p-4 rounded-lg">
+                      <p className="text-xs text-[#6B7280] mb-1">预测达成时间</p>
+                      <p className="text-base font-semibold text-[#1F2933]">
+                        {formatGoalMonth(currentProgress.predictedDate)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 说明 */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-800">
+                  💡 预测基于近期资产增长趋势计算，实际情况可能因市场变化、收支变动等因素而有所不同，仅供参考。
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
         {/* 模块二：变化来源拆解 */}
         <Card title="变化来源拆解">
           {contributionData.length > 0 ? (
             <BarChart
               data={contributionData}
-              currency={settings?.baseCurrency || 'CNY'}
+              currency={baseCurrency}
               height={300}
             />
           ) : (
@@ -304,7 +429,7 @@ export const AnalyticsPage: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <DonutChart
                 data={currentStructureData}
-                currency={settings?.baseCurrency || 'CNY'}
+                currency={baseCurrency}
                 height={250}
                 showLegend={false}
               />
@@ -328,7 +453,7 @@ export const AnalyticsPage: React.FC = () => {
                         {item.percentage.toFixed(1)}%
                       </p>
                       <p className="text-sm text-[#6B7280] tabular-nums">
-                        ¥{item.value.toLocaleString()}
+                        {formatCurrency(item.value, baseCurrency)}
                       </p>
                     </div>
                   </div>
@@ -421,7 +546,7 @@ export const AnalyticsPage: React.FC = () => {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-[#1F2933] tabular-nums">
-                          ¥{snapshot.totalAsset.toLocaleString()}
+                          {formatCurrency(snapshot.totalAsset, baseCurrency)}
                         </p>
                       </div>
                     </div>

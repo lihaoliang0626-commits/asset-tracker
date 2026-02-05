@@ -69,6 +69,14 @@ export class SnapshotStorage {
   }
 
   /**
+   * 覆盖保存快照（用于批量重算）
+   */
+  async upsert(snapshot: Snapshot): Promise<Snapshot> {
+    await this.store.put(snapshot);
+    return snapshot;
+  }
+
+  /**
    * 获取快照
    */
   async get(id: string): Promise<Snapshot | undefined> {

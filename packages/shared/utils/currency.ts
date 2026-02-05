@@ -48,10 +48,20 @@ export function convertFromRateTable(
 /**
  * 格式化货币金额
  */
+function getDefaultLocale(): string {
+  if (typeof document !== 'undefined') {
+    return document.documentElement.lang || navigator.language || 'zh-CN';
+  }
+  if (typeof navigator !== 'undefined') {
+    return navigator.language || 'zh-CN';
+  }
+  return 'zh-CN';
+}
+
 export function formatCurrency(
   amount: number,
   currency: string,
-  locale: string = 'zh-CN'
+  locale: string = getDefaultLocale()
 ): string {
   try {
     return new Intl.NumberFormat(locale, {
@@ -71,9 +81,10 @@ export function formatCurrency(
  */
 export function formatNumber(
   value: number,
-  decimals: number = 2
+  decimals: number = 2,
+  locale: string = getDefaultLocale()
 ): string {
-  return new Intl.NumberFormat('zh-CN', {
+  return new Intl.NumberFormat(locale, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
   }).format(value);

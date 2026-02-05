@@ -3,7 +3,7 @@
  */
 
 export const DB_NAME = 'AssetTrackerDB';
-export const DB_VERSION = 2;
+export const DB_VERSION = 3;
 
 // 数据库表名
 export const STORES = {
@@ -68,37 +68,62 @@ export const STORE_CONFIGS: StoreConfig[] = [
  */
 export function initDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
+    console.log('[DB] Opening database...', { name: DB_NAME, version: DB_VERSION });
+
+    if (!window.indexedDB) {
+      reject(new Error('IndexedDB is not available'));
+      return;
+    }
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onerror = () => {
-      reject(new Error(`Failed to open database: ${request.error?.message}`));
+      const errorMsg = `Failed to open database: ${request.error?.message || 'Unknown error'}`;
+      console.error('[DB] Error:', errorMsg);
+      reject(new Error(errorMsg));
     };
 
     request.onsuccess = () => {
+      console.log('[DB] Database opened successfully');
       resolve(request.result);
     };
 
+    request.onblocked = () => {
+      console.warn('[DB] Database upgrade blocked by another connection');
+      reject(new Error('数据库被其他标签页占用，请关闭其他标签页后重试'));
+    };
+
     request.onupgradeneeded = (event) => {
+      console.log('[DB] Upgrading database...');
       const db = (event.target as IDBOpenDBRequest).result;
 
-      // 创建对象存储
-      STORE_CONFIGS.forEach((config) => {
-        // 如果存储已存在，先删除
-        if (db.objectStoreNames.contains(config.name)) {
-          db.deleteObjectStore(config.name);
-        }
-
+      try {
         // 创建对象存储
-        const store = db.createObjectStore(config.name, {
-          keyPath: config.keyPath,
-          autoIncrement: config.autoIncrement,
-        });
+        STORE_CONFIGS.forEach((config) => {
+          // 如果存储已存在，先删除
+          if (db.objectStoreNames.contains(config.name)) {
+            console.log('[DB] Deleting existing store:', config.name);
+            db.deleteObjectStore(config.name);
+          }
 
-        // 创建索引
-        config.indexes?.forEach((index) => {
-          store.createIndex(index.name, index.keyPath, index.options);
+          // 创建对象存储
+          console.log('[DB] Creating store:', config.name);
+          const store = db.createObjectStore(config.name, {
+            keyPath: config.keyPath,
+            autoIncrement: config.autoIncrement,
+          });
+
+          // 创建索引
+          config.indexes?.forEach((index) => {
+            console.log('[DB] Creating index:', index.name, 'on store:', config.name);
+            store.createIndex(index.name, index.keyPath, index.options);
+          });
         });
-      });
+        console.log('[DB] Database upgrade completed');
+      } catch (error) {
+        console.error('[DB] Upgrade error:', error);
+        throw error;
+      }
     };
   });
 }

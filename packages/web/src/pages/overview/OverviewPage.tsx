@@ -1,11 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Plus } from 'lucide-react';
-import { useSnapshotStore, useAnalyticsStore } from '../../stores';
+import { Plus, Target } from 'lucide-react';
+import { useSnapshotStore, useAnalyticsStore, useGoalStore, useSettingsStore } from '../../stores';
 import { Card, NumberDisplay, Button } from '../../components/base';
 import { LineChart, DonutChart } from '../../components/charts';
 import { Header } from '../../components/layout';
-import { formatDate, AssetGroup } from '@asset-tracker/shared';
+import { formatDate, AssetGroup, formatCurrency } from '@asset-tracker/shared';
 import { SnapshotRecordModal } from './SnapshotRecordModal';
+import { AssetDetailModal } from './AssetDetailModal';
+import { GoalProgressCard, GoalSetupModal } from '../../components/goal';
 
 const USER_ID = 'default'; // 临时使用默认用户ID
 
@@ -14,7 +16,10 @@ const USER_ID = 'default'; // 临时使用默认用户ID
  */
 export const OverviewPage: React.FC = () => {
   const [showRecordModal, setShowRecordModal] = useState(false);
+  const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
+  const [isEditingGoal, setIsEditingGoal] = useState(false);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>('month');
+  const [selectedAssetGroup, setSelectedAssetGroup] = useState<AssetGroup | null>(null);
 
   const {
     currentSnapshot,
@@ -32,18 +37,72 @@ export const OverviewPage: React.FC = () => {
     analyze,
   } = useAnalyticsStore();
 
+  const { settings, loadSettings } = useSettingsStore();
+
+  const {
+    activeGoal,
+    currentProgress,
+    loadGoals,
+    createGoal,
+    updateGoal,
+    refreshProgress,
+  } = useGoalStore();
+
   // 加载数据
   useEffect(() => {
+    loadSettings(USER_ID);
     getLatestSnapshot(USER_ID);
     loadSnapshots(USER_ID);
     analyze(USER_ID);
+    loadGoals(USER_ID);
   }, []);
+
+  // 当快照更新时，刷新目标进度
+  useEffect(() => {
+    if (currentSnapshot && activeGoal) {
+      refreshProgress(USER_ID, currentSnapshot, snapshots);
+    }
+  }, [currentSnapshot, snapshots, activeGoal]);
 
   // 切换周期
   const handlePeriodChange = (period: 'week' | 'month') => {
     setSelectedPeriod(period);
     setPeriod(period);
     analyze(USER_ID);
+  };
+
+  // 创建或更新目标
+  const handleCreateGoal = (input: Omit<import('@asset-tracker/shared').CreateGoalInput, 'userId'>) => {
+    if (!currentSnapshot) return;
+
+    if (isEditingGoal && activeGoal) {
+      // 编辑模式：更新现有目标
+      updateGoal({
+        id: activeGoal.id,
+        ...input,
+      });
+    } else {
+      // 创建模式：创建新目标
+      createGoal(
+        {
+          userId: USER_ID,
+          ...input,
+        },
+        currentSnapshot
+      );
+    }
+
+    // 刷新进度
+    refreshProgress(USER_ID, currentSnapshot, snapshots);
+
+    // 重置编辑状态
+    setIsEditingGoal(false);
+  };
+
+  // 打开编辑目标模态框
+  const handleEditGoal = () => {
+    setIsEditingGoal(true);
+    setShowGoalSetupModal(true);
   };
 
   // 准备趋势图数据
@@ -64,6 +123,7 @@ export const OverviewPage: React.FC = () => {
     : [];
 
   const assetGroups = currentSnapshot?.assets ?? [];
+  const baseCurrency = settings?.baseCurrency || currentSnapshot?.baseCurrency || 'CNY';
 
   return (
     <div className="pb-20">
@@ -94,19 +154,52 @@ export const OverviewPage: React.FC = () => {
               </svg>
             </div>
             <div className="text-4xl font-bold text-text-primary tabular-nums">
-              ¥{currentSnapshot?.totalAsset?.toLocaleString() || '0'}
+              {formatCurrency(currentSnapshot?.totalAsset || 0, baseCurrency)}
             </div>
             {assetGroups.length === 0 ? (
               <div className="text-sm text-text-tertiary">暂无资产数据</div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-text-tertiary">
                 <span>−</span>
-                <span className="tabular-nums">¥{assetChange?.absoluteChange.toFixed(2) || '0.00'}</span>
+                <span className="tabular-nums">
+                  {formatCurrency(assetChange?.absoluteChange || 0, baseCurrency)}
+                </span>
                 <span>(?)</span>
               </div>
             )}
           </div>
         </Card>
+
+        {/* 1.5 目标进度卡片 */}
+        {activeGoal && currentProgress ? (
+          <GoalProgressCard
+            goal={activeGoal}
+            progress={currentProgress}
+            onEdit={handleEditGoal}
+          />
+        ) : (
+          currentSnapshot && (
+            <Card>
+              <div className="text-center py-6">
+                <div className="text-4xl mb-3">🎯</div>
+                <h3 className="text-base font-medium text-gray-900 mb-2">
+                  设置资产目标
+                </h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  设定目标，追踪进度，让每次记录更有意义
+                </p>
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setShowGoalSetupModal(true)}
+                >
+                  <Target className="h-4 w-4 mr-1" />
+                  设置目标
+                </Button>
+              </div>
+            </Card>
+          )
+        )}
 
         {/* 2. 趋势图 */}
         {chartData.length > 0 ? (
@@ -135,7 +228,7 @@ export const OverviewPage: React.FC = () => {
             </div>
             <LineChart
               data={chartData}
-              currency={currentSnapshot?.baseCurrency || 'CNY'}
+              currency={baseCurrency}
               height={200}
             />
           </Card>
@@ -152,7 +245,7 @@ export const OverviewPage: React.FC = () => {
           {structureData.length > 0 ? (
             <DonutChart
               data={structureData}
-              currency={currentSnapshot?.baseCurrency || 'CNY'}
+              currency={baseCurrency}
               height={260}
               className="relative"
             />
@@ -172,6 +265,7 @@ export const OverviewPage: React.FC = () => {
                   key={group.type}
                   label={getAssetTypeName(group.type)}
                   value={group.totalValue.toLocaleString()}
+                  onClick={() => setSelectedAssetGroup(group)}
                 />
               ))
             ) : (
@@ -196,18 +290,46 @@ export const OverviewPage: React.FC = () => {
           }}
         />
       )}
+
+      {/* 目标设置/编辑模态框 */}
+      {showGoalSetupModal && currentSnapshot && (
+        <GoalSetupModal
+          isOpen={showGoalSetupModal}
+          onClose={() => {
+            setShowGoalSetupModal(false);
+            setIsEditingGoal(false);
+          }}
+          onSubmit={handleCreateGoal}
+          baseCurrency={currentSnapshot.baseCurrency}
+          currentAmount={currentSnapshot.totalAsset}
+          existingGoal={isEditingGoal ? activeGoal || undefined : undefined}
+        />
+      )}
+
+      {/* 资产详情模态框 */}
+      {selectedAssetGroup && (
+        <AssetDetailModal
+          isOpen={!!selectedAssetGroup}
+          onClose={() => setSelectedAssetGroup(null)}
+          assetGroup={selectedAssetGroup}
+          baseCurrency={baseCurrency}
+        />
+      )}
     </div>
   );
 };
 
 // 资产列表项组件
-function AssetListItem({ label, value }: { label: string; value: string }) {
+function AssetListItem({ label, value, onClick }: { label: string; value: string; onClick?: () => void }) {
   return (
     <Card hoverable>
-      <div className="flex items-center justify-between">
+      <button
+        onClick={onClick}
+        className="w-full flex items-center justify-between text-left transition-opacity hover:opacity-80"
+      >
         <span className="text-sm text-text-secondary font-medium">{label}</span>
         <span className="text-sm text-text-primary font-bold tabular-nums">{value}</span>
-      </div>
+      </button>
     </Card>
   );
 }

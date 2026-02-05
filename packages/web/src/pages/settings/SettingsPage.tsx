@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useSettingsStore, useSnapshotStore, useExchangeRateStore, useAnalyticsStore } from '../../stores';
 import { Card, Button, Select, Input, Modal } from '../../components/base';
+import { AllocationTargetSetting } from '../../components/allocation';
 import { Header } from '../../components/layout';
-import { CURRENCIES, exportAllData, formatDate, CurrencyInfo, Snapshot } from '@asset-tracker/shared';
+import { CURRENCIES, exportAllData, formatDate, formatCurrency, CurrencyInfo, Snapshot } from '@asset-tracker/shared';
 
 const USER_ID = 'default';
 
@@ -21,10 +22,16 @@ export const SettingsPage: React.FC = () => {
     updateLanguage,
     toggleAIAnalysis,
     toggleDataBackup,
-    toggleAssetType,
+    updateAllocationTarget,
   } = useSettingsStore();
 
-  const { snapshots, deleteSnapshot, refreshSnapshots, getLatestSnapshot } = useSnapshotStore();
+  const {
+    snapshots,
+    deleteSnapshot,
+    refreshSnapshots,
+    getLatestSnapshot,
+    recalculateBaseCurrency,
+  } = useSnapshotStore();
   const { rates, deleteOutdated } = useExchangeRateStore();
   const { analyze } = useAnalyticsStore();
 
@@ -103,11 +110,19 @@ export const SettingsPage: React.FC = () => {
             <Select
               label="基准货币"
               value={settings.baseCurrency}
-              onChange={(e) => updateBaseCurrency(USER_ID, e.target.value)}
-              options={CURRENCIES.map((c: CurrencyInfo) => ({
-                value: c.code,
-                label: `${c.symbol} ${c.nameZh} (${c.code})`,
-              }))}
+              onChange={async (e) => {
+                const nextCurrency = e.target.value;
+                await updateBaseCurrency(USER_ID, nextCurrency);
+                await recalculateBaseCurrency(USER_ID, nextCurrency);
+                await refreshSnapshots(USER_ID);
+                await getLatestSnapshot(USER_ID);
+                await analyze(USER_ID, true);
+              }}
+              options={CURRENCIES.filter((c: CurrencyInfo) => c.code === 'CNY' || c.code === 'USD')
+                .map((c: CurrencyInfo) => ({
+                  value: c.code,
+                  label: `${c.symbol} ${c.nameZh} (${c.code})`,
+                }))}
             />
 
             <div>
@@ -215,43 +230,11 @@ export const SettingsPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* 资产分类管理 */}
-        <Card title="资产分类管理">
-          <div className="space-y-3">
-            {[
-              { type: 'cash', name: '现金', icon: '💵' },
-              { type: 'bank', name: '银行账户', icon: '🏦' },
-              { type: 'securities', name: '证券', icon: '📈' },
-              { type: 'crypto', name: '加密资产', icon: '₿' },
-              { type: 'payment', name: '支付账户', icon: '💳' },
-            ].map(item => {
-              const isEnabled = settings.enabledAssetTypes.includes(item.type as any);
-              return (
-                <div
-                  key={item.type}
-                  className="flex items-center justify-between p-3 bg-[#F6F7F9] rounded-lg"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{item.icon}</span>
-                    <span className="font-medium text-[#1F2933]">{item.name}</span>
-                  </div>
-                  <button
-                    onClick={() => toggleAssetType(USER_ID, item.type as any, !isEnabled)}
-                    className={`w-12 h-6 rounded-full transition-colors ${
-                      isEnabled ? 'bg-[#1F3A8A]' : 'bg-[#E5E7EB]'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 bg-white rounded-full transition-transform ${
-                        isEnabled ? 'translate-x-7' : 'translate-x-1'
-                      }`}
-                    />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </Card>
+        {/* 资产配置目标 */}
+        <AllocationTargetSetting
+          value={settings.allocationTarget}
+          onChange={(target) => updateAllocationTarget(USER_ID, target)}
+        />
 
         {/* 数据管理 */}
         <Card title="数据管理">
@@ -424,7 +407,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[#1F2933] tabular-nums">
-                      ¥{snapshot.totalAsset.toLocaleString()}
+                      {formatCurrency(snapshot.totalAsset, settings.baseCurrency)}
                     </p>
                     <button
                       onClick={() => handleDeleteSnapshot(snapshot.id)}

@@ -1,4 +1,4 @@
-import { UserSettings, AppPreferences, DEFAULT_USER_SETTINGS, DEFAULT_APP_PREFERENCES } from '../types';
+import { UserSettings, AppPreferences, DEFAULT_USER_SETTINGS, DEFAULT_APP_PREFERENCES, AssetAllocationTarget } from '../types';
 import { DBStore, STORES } from './db';
 
 /**
@@ -146,6 +146,16 @@ export class SettingsStorage {
     }
 
     return this.update(userId, { enabledAssetTypes: enabledTypes });
+  }
+
+  /**
+   * 更新资产配置目标
+   */
+  async updateAllocationTarget(
+    userId: string,
+    target: AssetAllocationTarget
+  ): Promise<UserSettings> {
+    return this.update(userId, { allocationTarget: target });
   }
 
   /**

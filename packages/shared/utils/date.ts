@@ -12,27 +12,48 @@ export function generateId(prefix: string = ''): string {
 /**
  * 格式化日期
  */
+function getDefaultLocale(): string {
+  if (typeof document !== 'undefined') {
+    return document.documentElement.lang || navigator.language || 'zh-CN';
+  }
+  if (typeof navigator !== 'undefined') {
+    return navigator.language || 'zh-CN';
+  }
+  return 'zh-CN';
+}
+
 export function formatDate(
   timestamp: number,
   format: 'short' | 'long' | 'relative' = 'short'
 ): string {
   const date = new Date(timestamp);
+  const locale = getDefaultLocale();
+  const isZh = locale.startsWith('zh');
 
   if (format === 'relative') {
     const now = Date.now();
     const diff = now - timestamp;
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
 
-    if (days === 0) return '今天';
-    if (days === 1) return '昨天';
-    if (days < 7) return `${days}天前`;
-    if (days < 30) return `${Math.floor(days / 7)}周前`;
-    if (days < 365) return `${Math.floor(days / 30)}个月前`;
-    return `${Math.floor(days / 365)}年前`;
+    if (isZh) {
+      if (days === 0) return '今天';
+      if (days === 1) return '昨天';
+      if (days < 7) return `${days}天前`;
+      if (days < 30) return `${Math.floor(days / 7)}周前`;
+      if (days < 365) return `${Math.floor(days / 30)}个月前`;
+      return `${Math.floor(days / 365)}年前`;
+    }
+
+    if (days === 0) return 'Today';
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return `${days} days ago`;
+    if (days < 30) return `${Math.floor(days / 7)} weeks ago`;
+    if (days < 365) return `${Math.floor(days / 30)} months ago`;
+    return `${Math.floor(days / 365)} years ago`;
   }
 
   if (format === 'long') {
-    return date.toLocaleDateString('zh-CN', {
+    return date.toLocaleDateString(locale, {
       year: 'numeric',
       month: 'long',
       day: 'numeric',
@@ -41,7 +62,7 @@ export function formatDate(
     });
   }
 
-  return date.toLocaleDateString('zh-CN', {
+  return date.toLocaleDateString(locale, {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

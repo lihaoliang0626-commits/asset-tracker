@@ -4,6 +4,9 @@ import { OverviewPage } from './pages/overview';
 import { AnalyticsPage } from './pages/analytics';
 import { SettingsPage } from './pages/settings';
 import { initStorage } from '@asset-tracker/shared';
+import { useSettingsStore } from './stores';
+
+const USER_ID = 'default';
 
 /**
  * 主应用组件 - 简约大气设计
@@ -11,21 +14,72 @@ import { initStorage } from '@asset-tracker/shared';
 export const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isInitialized, setIsInitialized] = useState(false);
+  const { settings, loadSettings } = useSettingsStore();
 
   // 初始化存储
   useEffect(() => {
     const init = async () => {
       try {
-        await initStorage();
+        // 检查 IndexedDB 是否可用
+        if (!window.indexedDB) {
+          throw new Error('浏览器不支持 IndexedDB，请使用现代浏览器（Chrome、Firefox、Safari 等）');
+        }
+
+        // 添加 10 秒超时
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('初始化超时，可能是浏览器存储权限被阻止')), 10000);
+        });
+
+        await Promise.race([initStorage(), timeoutPromise]);
         setIsInitialized(true);
       } catch (error) {
         console.error('Failed to initialize storage:', error);
-        alert('初始化失败，请刷新页面重试');
+        const message = error instanceof Error ? error.message : '未知错误';
+        alert(`初始化失败：${message}\n\n请尝试：\n1. 检查浏览器是否允许存储\n2. 退出隐私/无痕模式\n3. 清除浏览器缓存后重试`);
       }
     };
 
     init();
   }, []);
+
+  useEffect(() => {
+    if (isInitialized) {
+      loadSettings(USER_ID);
+    }
+  }, [isInitialized, loadSettings]);
+
+  useEffect(() => {
+    if (!settings) return;
+    const root = document.documentElement;
+    const applyTheme = (theme: 'light' | 'dark') => {
+      root.classList.toggle('dark', theme === 'dark');
+    };
+    let mediaQuery: MediaQueryList | null = null;
+    let listener: ((event: MediaQueryListEvent) => void) | null = null;
+
+    if (settings.theme === 'system') {
+      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      applyTheme(mediaQuery.matches ? 'dark' : 'light');
+      listener = (event) => {
+        applyTheme(event.matches ? 'dark' : 'light');
+      };
+      mediaQuery.addEventListener('change', listener);
+    } else {
+      applyTheme(settings.theme);
+    }
+
+    return () => {
+      if (mediaQuery && listener) {
+        mediaQuery.removeEventListener('change', listener);
+      }
+    };
+  }, [settings?.theme]);
+
+  useEffect(() => {
+    if (settings?.language) {
+      document.documentElement.lang = settings.language;
+    }
+  }, [settings?.language]);
 
   // 底部导航配置
   const tabs = [

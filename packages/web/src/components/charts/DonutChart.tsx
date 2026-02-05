@@ -50,7 +50,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
           {formatCurrency(data.value, currency)}
         </p>
         <p className="text-sm text-[#6B7280] mt-1">
-          占比: {formatPercent(data.percentage, 1)}
+          占比: {data.percentage.toFixed(1)}%
         </p>
       </div>
     );
@@ -70,7 +70,7 @@ export const DonutChart: React.FC<DonutChartProps> = ({
               <span className="text-[#1F2933]">{entry.value}</span>
             </div>
             <span className="text-[#6B7280] font-medium tabular-nums">
-              {formatPercent(entry.payload.percentage, 1)}
+              {entry.payload.percentage.toFixed(1)}%
             </span>
           </div>
         ))}

@@ -5,7 +5,17 @@
       "Bash(node --version)",
       "Bash(npm --version:*)",
       "Bash(npm install:*)",
-      "Bash(pnpm dev:web:*)"
+      "Bash(pnpm dev:web:*)",
+      "WebSearch",
+      "Bash(pnpm type-check:*)",
+      "Bash(pnpm add:*)",
+      "Bash(pnpm remove:*)",
+      "Bash(npm run dev:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm tsc:*)",
+      "Bash(pnpm dev:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(pnpm -r build:*)"
     ]
   }
 }
