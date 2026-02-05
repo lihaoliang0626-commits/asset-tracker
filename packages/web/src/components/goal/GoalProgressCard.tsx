@@ -1,5 +1,5 @@
 import React from 'react';
-import { Goal, GoalProgress } from '@asset-tracker/shared';
+import { Goal, GoalProgress, GoalStatus } from '@asset-tracker/shared';
 import { getGoalStatus, formatGoalAmount, formatGoalMonth } from '@asset-tracker/shared';
 import { Card } from '../base/Card';
 import { Button } from '../base/Button';
@@ -67,12 +67,14 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
     return `按当前趋势，到期预计达到 ${formatGoalAmount(progress.predictedAmount, goal.baseCurrency)}`;
   };
 
-  const statusBgColor = {
+  const statusBgColor: Record<GoalStatus, string> = {
+    not_started: 'bg-gray-100 text-gray-700',
+    in_progress: 'bg-gray-100 text-gray-700',
     achieved: 'bg-blue-50 text-blue-700',
     on_track: 'bg-blue-50 text-blue-700',
     behind: 'bg-gray-100 text-gray-700',
     overdue: 'bg-gray-100 text-gray-700',
-  }[status] || '';
+  };
 
   return (
     <Card className={cn('border-l-4 border-l-blue-600', className)}>
@@ -128,7 +130,7 @@ export const GoalProgressCard: React.FC<GoalProgressCardProps> = ({
       {(status !== 'in_progress' || progress.timeProgress < 3) && getStatusText() && (
         <div className={cn(
           'px-3 py-2 rounded-md text-sm mb-4',
-          progress.timeProgress < 3 ? 'bg-gray-100 text-gray-700' : statusBgColor
+          progress.timeProgress < 3 ? 'bg-gray-100 text-gray-700' : statusBgColor[status]
         )}>
           {getStatusText()}
         </div>
