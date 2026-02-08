@@ -12,6 +12,20 @@ export class ExchangeRateStorage {
     this.store = new DBStore<ExchangeRate>(STORES.EXCHANGE_RATES);
   }
 
+  private async getRatesForPair(
+    fromCurrency: string,
+    toCurrency: string
+  ): Promise<ExchangeRate[]> {
+    try {
+      return await this.store.getByIndex('fromTo', [fromCurrency, toCurrency]);
+    } catch {
+      const allRates = await this.store.getAll();
+      return allRates.filter(
+        r => r.fromCurrency === fromCurrency && r.toCurrency === toCurrency
+      );
+    }
+  }
+
   /**
    * 保存汇率
    */
@@ -43,13 +57,14 @@ export class ExchangeRateStorage {
    * 获取汇率
    */
   async getRate(fromCurrency: string, toCurrency: string): Promise<ExchangeRate | null> {
-    const allRates = await this.store.getAll();
+    const rates = await this.getRatesForPair(fromCurrency, toCurrency);
+    if (rates.length === 0) {
+      return null;
+    }
 
-    const rate = allRates.find(
-      r => r.fromCurrency === fromCurrency && r.toCurrency === toCurrency
-    );
-
-    return rate || null;
+    return rates.reduce((latest, current) => (
+      current.timestamp > latest.timestamp ? current : latest
+    ));
   }
 
   /**

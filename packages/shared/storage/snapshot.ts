@@ -100,10 +100,16 @@ export class SnapshotStorage {
     startTime: number,
     endTime: number
   ): Promise<Snapshot[]> {
-    const allSnapshots = await this.getByUserId(userId);
-    return allSnapshots.filter(
-      snapshot => snapshot.timestamp >= startTime && snapshot.timestamp <= endTime
-    );
+    if (typeof IDBKeyRange === 'undefined') {
+      const allSnapshots = await this.getByUserId(userId);
+      return allSnapshots.filter(
+        snapshot => snapshot.timestamp >= startTime && snapshot.timestamp <= endTime
+      );
+    }
+
+    const range = IDBKeyRange.bound([userId, startTime], [userId, endTime]);
+    const snapshots = await this.store.getByIndex('userTime', range);
+    return snapshots.sort((a, b) => b.timestamp - a.timestamp);
   }
 
   /**

@@ -178,16 +178,16 @@ export const OverviewPage: React.FC = () => {
             onEdit={handleEditGoal}
           />
         ) : (
-          currentSnapshot && (
-            <Card>
-              <div className="text-center py-6">
-                <div className="text-4xl mb-3">🎯</div>
-                <h3 className="text-base font-medium text-gray-900 mb-2">
-                  设置资产目标
-                </h3>
-                <p className="text-sm text-gray-600 mb-4">
-                  设定目标，追踪进度，让每次记录更有意义
-                </p>
+          <Card>
+            <div className="text-center py-6">
+              <div className="text-4xl mb-3">🎯</div>
+              <h3 className="text-base font-medium text-gray-900 mb-2">
+                设置资产目标
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                设定目标，追踪进度，让每次记录更有意义
+              </p>
+              {currentSnapshot ? (
                 <Button
                   variant="primary"
                   size="md"
@@ -196,9 +196,18 @@ export const OverviewPage: React.FC = () => {
                   <Target className="h-4 w-4 mr-1" />
                   设置目标
                 </Button>
-              </div>
-            </Card>
-          )
+              ) : (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={() => setShowRecordModal(true)}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  先创建快照
+                </Button>
+              )}
+            </div>
+          </Card>
         )}
 
         {/* 2. 趋势图 */}

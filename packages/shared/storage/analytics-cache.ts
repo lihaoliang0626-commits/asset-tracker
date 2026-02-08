@@ -43,6 +43,7 @@ export class AnalyticsCacheStorage {
 
     // 检查缓存是否过期
     if (this.isExpired(existing)) {
+      await this.store.delete([userId, period, startTime, endTime]);
       return null;
     }
 
