@@ -1,16 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { useSettingsStore, useSnapshotStore, useExchangeRateStore, useAnalyticsStore } from '../../stores';
+import { useSettingsStore, useSnapshotStore, useExchangeRateStore, useAnalyticsStore, useAuthStore } from '../../stores';
 import { Card, Button, Select, Input, Modal } from '../../components/base';
 import { AllocationTargetSetting } from '../../components/allocation';
 import { Header } from '../../components/layout';
-import { CURRENCIES, exportAllData, formatDate, formatCurrency, CurrencyInfo, Snapshot } from '@asset-tracker/shared';
-
-const USER_ID = 'default';
+import { CURRENCIES, exportAllData, importAllData, formatDate, formatCurrency, CurrencyInfo, Snapshot } from '@asset-tracker/shared';
 
 /**
  * 设置页
  */
 export const SettingsPage: React.FC = () => {
+  const userId = useAuthStore(state => state.user?.id);
   const {
     settings,
     preferences,
@@ -41,13 +40,14 @@ export const SettingsPage: React.FC = () => {
 
   // 加载设置
   useEffect(() => {
-    loadSettings(USER_ID);
-  }, []);
+    if (userId) loadSettings(userId);
+  }, [userId]);
 
   // 导出数据
   const handleExport = async () => {
+    if (!userId) return;
     try {
-      const data = await exportAllData(USER_ID);
+      const data = await exportAllData(userId);
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -59,6 +59,27 @@ export const SettingsPage: React.FC = () => {
     } catch (error) {
       console.error('Failed to export data:', error);
       alert('导出失败，请重试');
+    }
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!userId) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await importAllData(userId, data);
+      await refreshSnapshots(userId);
+      await getLatestSnapshot(userId);
+      await analyze(userId, true);
+      alert('导入完成');
+    } catch (error) {
+      console.error('Failed to import data:', error);
+      alert('导入失败，请检查文件格式');
+    } finally {
+      event.target.value = '';
     }
   };
 
@@ -79,9 +100,10 @@ export const SettingsPage: React.FC = () => {
 
     try {
       await deleteSnapshot(snapshotId);
-      await refreshSnapshots(USER_ID);
-      await getLatestSnapshot(USER_ID);
-      await analyze(USER_ID, true);
+      if (!userId) return;
+      await refreshSnapshots(userId);
+      await getLatestSnapshot(userId);
+      await analyze(userId, true);
     } catch (error) {
       console.error('Failed to delete snapshot:', error);
       alert('删除失败，请重试');
@@ -112,11 +134,12 @@ export const SettingsPage: React.FC = () => {
               value={settings.baseCurrency}
               onChange={async (e) => {
                 const nextCurrency = e.target.value;
-                await updateBaseCurrency(USER_ID, nextCurrency);
-                await recalculateBaseCurrency(USER_ID, nextCurrency);
-                await refreshSnapshots(USER_ID);
-                await getLatestSnapshot(USER_ID);
-                await analyze(USER_ID, true);
+                if (!userId) return;
+                await updateBaseCurrency(userId, nextCurrency);
+                await recalculateBaseCurrency(userId, nextCurrency);
+                await refreshSnapshots(userId);
+                await getLatestSnapshot(userId);
+                await analyze(userId, true);
               }}
               options={CURRENCIES.filter((c: CurrencyInfo) => c.code === 'CNY' || c.code === 'USD')
                 .map((c: CurrencyInfo) => ({
@@ -131,7 +154,7 @@ export const SettingsPage: React.FC = () => {
               </label>
               <div className="flex gap-3">
                 <button
-                  onClick={() => updateExchangeRateMode(USER_ID, 'auto')}
+                  onClick={() => userId && updateExchangeRateMode(userId, 'auto')}
                   className={`flex-1 p-3 rounded-lg border-2 transition-all ${
                     settings.exchangeRateMode === 'auto'
                       ? 'border-[#1F3A8A] bg-[#1F3A8A]/5'
@@ -144,7 +167,7 @@ export const SettingsPage: React.FC = () => {
                   </div>
                 </button>
                 <button
-                  onClick={() => updateExchangeRateMode(USER_ID, 'manual')}
+                  onClick={() => userId && updateExchangeRateMode(userId, 'manual')}
                   className={`flex-1 p-3 rounded-lg border-2 transition-all ${
                     settings.exchangeRateMode === 'manual'
                       ? 'border-[#1F3A8A] bg-[#1F3A8A]/5'
@@ -167,7 +190,7 @@ export const SettingsPage: React.FC = () => {
             <Select
               label="主题"
               value={settings.theme}
-              onChange={(e) => updateTheme(USER_ID, e.target.value as any)}
+              onChange={(e) => userId && updateTheme(userId, e.target.value as any)}
               options={[
                 { value: 'light', label: '浅色' },
                 { value: 'dark', label: '深色' },
@@ -178,7 +201,7 @@ export const SettingsPage: React.FC = () => {
             <Select
               label="语言"
               value={settings.language}
-              onChange={(e) => updateLanguage(USER_ID, e.target.value as any)}
+              onChange={(e) => userId && updateLanguage(userId, e.target.value as any)}
               options={[
                 { value: 'zh-CN', label: '简体中文' },
                 { value: 'en-US', label: 'English' },
@@ -196,7 +219,7 @@ export const SettingsPage: React.FC = () => {
                 <p className="text-sm text-[#6B7280] mt-1">使用 AI 生成资产变化分析</p>
               </div>
               <button
-                onClick={() => toggleAIAnalysis(USER_ID, !settings.enableAIAnalysis)}
+                onClick={() => userId && toggleAIAnalysis(userId, !settings.enableAIAnalysis)}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   settings.enableAIAnalysis ? 'bg-[#1F3A8A]' : 'bg-[#E5E7EB]'
                 }`}
@@ -215,7 +238,7 @@ export const SettingsPage: React.FC = () => {
                 <p className="text-sm text-[#6B7280] mt-1">启用云端加密备份</p>
               </div>
               <button
-                onClick={() => toggleDataBackup(USER_ID, !settings.dataBackupEnabled)}
+                onClick={() => userId && toggleDataBackup(userId, !settings.dataBackupEnabled)}
                 className={`w-12 h-6 rounded-full transition-colors ${
                   settings.dataBackupEnabled ? 'bg-[#1F3A8A]' : 'bg-[#E5E7EB]'
                 }`}
@@ -233,7 +256,7 @@ export const SettingsPage: React.FC = () => {
         {/* 资产配置目标 */}
         <AllocationTargetSetting
           value={settings.allocationTarget}
-          onChange={(target) => updateAllocationTarget(USER_ID, target)}
+          onChange={(target) => userId && updateAllocationTarget(userId, target)}
         />
 
         {/* 数据管理 */}
@@ -271,6 +294,26 @@ export const SettingsPage: React.FC = () => {
                 </svg>
               </div>
             </button>
+
+            <label className="block w-full cursor-pointer p-4 bg-[#F6F7F9] rounded-lg hover:bg-[#E5E7EB] transition-colors text-left">
+              <input
+                type="file"
+                accept="application/json,.json"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-[#1F2933]">导入数据</p>
+                  <p className="text-sm text-[#6B7280] mt-1">
+                    从旧版本地 JSON 导出文件导入到当前账号
+                  </p>
+                </div>
+                <svg className="w-5 h-5 text-[#6B7280]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M12 4v12m0-12l-4 4m4-4l4 4" />
+                </svg>
+              </div>
+            </label>
 
             <button
               onClick={handleCleanupRates}

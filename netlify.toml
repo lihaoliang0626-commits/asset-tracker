@@ -1,7 +1,17 @@
 [build]
-  base = "packages/web"
-  command = "pnpm install --frozen-lockfile && pnpm -C ../shared build && pnpm build"
-  publish = "dist"
+  command = "pnpm install --frozen-lockfile && pnpm --filter @asset-tracker/shared build && pnpm build:web"
+  publish = "packages/web/dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

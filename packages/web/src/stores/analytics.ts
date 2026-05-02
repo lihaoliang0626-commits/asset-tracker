@@ -164,6 +164,7 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
         contributions,
         structureComparison: structureComparison || undefined,
         aiInsight: undefined, // AI 洞察需要额外调用 API
+        cachedAt: Date.now(),
       });
 
       set({

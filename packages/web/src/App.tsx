@@ -1,158 +1,133 @@
-import React, { useState, useEffect } from 'react';
-import { Layout, BottomNav } from './components/layout';
+import React, { useEffect, useState } from 'react';
+import { BarChart3, LayoutDashboard, LogOut, Settings } from 'lucide-react';
 import { OverviewPage } from './pages/overview';
 import { AnalyticsPage } from './pages/analytics';
 import { SettingsPage } from './pages/settings';
-import { initStorage } from '@asset-tracker/shared';
-import { useSettingsStore } from './stores';
+import { AuthPage } from './components/auth';
+import {
+  useAuthStore,
+  useSnapshotStore,
+  useAnalyticsStore,
+  useGoalStore,
+} from './stores';
 
-const USER_ID = 'default';
+type TabId = 'overview' | 'analytics' | 'settings';
 
-/**
- * 主应用组件 - 简约大气设计
- */
+const tabs: Array<{ id: TabId; label: string; icon: React.ComponentType<{ className?: string }> }> = [
+  { id: 'overview', label: '总览', icon: LayoutDashboard },
+  { id: 'analytics', label: '分析', icon: BarChart3 },
+  { id: 'settings', label: '设置', icon: Settings },
+];
+
 export const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('overview');
-  const [isInitialized, setIsInitialized] = useState(false);
-  const { settings, loadSettings } = useSettingsStore();
+  const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const { user, isLoading, init, signOut } = useAuthStore();
+  const resetSnapshots = useSnapshotStore(state => state.reset);
+  const resetAnalytics = useAnalyticsStore(state => state.reset);
+  const resetGoals = useGoalStore(state => state.reset);
 
-  // 初始化存储
   useEffect(() => {
-    const init = async () => {
-      try {
-        // 检查 IndexedDB 是否可用
-        if (!window.indexedDB) {
-          throw new Error('浏览器不支持 IndexedDB，请使用现代浏览器（Chrome、Firefox、Safari 等）');
-        }
-
-        // 添加 10 秒超时
-        const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('初始化超时，可能是浏览器存储权限被阻止')), 10000);
-        });
-
-        await Promise.race([initStorage(), timeoutPromise]);
-        setIsInitialized(true);
-      } catch (error) {
-        console.error('Failed to initialize storage:', error);
-        const message = error instanceof Error ? error.message : '未知错误';
-        alert(`初始化失败：${message}\n\n请尝试：\n1. 检查浏览器是否允许存储\n2. 退出隐私/无痕模式\n3. 清除浏览器缓存后重试`);
-      }
-    };
-
     init();
-  }, []);
+  }, [init]);
 
-  useEffect(() => {
-    if (isInitialized) {
-      loadSettings(USER_ID);
-    }
-  }, [isInitialized, loadSettings]);
+  const handleSignOut = async () => {
+    await signOut();
+    resetSnapshots();
+    resetAnalytics();
+    resetGoals();
+  };
 
-  useEffect(() => {
-    if (!settings) return;
-    const root = document.documentElement;
-    const applyTheme = (theme: 'light' | 'dark') => {
-      root.classList.toggle('dark', theme === 'dark');
-    };
-    let mediaQuery: MediaQueryList | null = null;
-    let listener: ((event: MediaQueryListEvent) => void) | null = null;
-
-    if (settings.theme === 'system') {
-      mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      applyTheme(mediaQuery.matches ? 'dark' : 'light');
-      listener = (event) => {
-        applyTheme(event.matches ? 'dark' : 'light');
-      };
-      mediaQuery.addEventListener('change', listener);
-    } else {
-      applyTheme(settings.theme);
-    }
-
-    return () => {
-      if (mediaQuery && listener) {
-        mediaQuery.removeEventListener('change', listener);
-      }
-    };
-  }, [settings?.theme]);
-
-  useEffect(() => {
-    if (settings?.language) {
-      document.documentElement.lang = settings.language;
-    }
-  }, [settings?.language]);
-
-  // 底部导航配置
-  const tabs = [
-    {
-      id: 'overview',
-      label: '总览',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-    },
-    {
-      id: 'analytics',
-      label: '分析',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-    },
-    {
-      id: 'settings',
-      label: '我的',
-      icon: (
-        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-        </svg>
-      ),
-    },
-  ];
-
-  // 渲染当前页面
   const renderPage = () => {
     switch (activeTab) {
-      case 'overview':
-        return <OverviewPage />;
       case 'analytics':
         return <AnalyticsPage />;
       case 'settings':
         return <SettingsPage />;
+      case 'overview':
       default:
         return <OverviewPage />;
     }
   };
 
-  // 加载中状态
-  if (!isInitialized) {
+  if (isLoading) {
     return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center min-h-screen">
-          <div className="w-12 h-12 border-4 border-light-2 border-t-accent-primary rounded-full animate-spin mb-4" />
-          <p className="text-lg font-semibold text-text-primary">初始化中...</p>
-          <p className="text-sm text-text-tertiary mt-2">首次使用需要设置数据库</p>
-        </div>
-      </Layout>
+      <div className="min-h-screen bg-[#F6F7F9] flex items-center justify-center">
+        <div className="h-10 w-10 rounded-full border-4 border-[#D1D5DB] border-t-[#1F3A8A] animate-spin" />
+      </div>
     );
   }
 
-  return (
-    <Layout>
-      {/* 页面内容 */}
-      <main className="min-h-screen bg-light-0">
-        {renderPage()}
-      </main>
+  if (!user) {
+    return <AuthPage />;
+  }
 
-      {/* 底部导航 */}
-      <BottomNav
-        tabs={tabs}
-        activeTab={activeTab}
-        onChange={setActiveTab}
-      />
-    </Layout>
+  return (
+    <div className="min-h-screen bg-[#F6F7F9] text-[#111827]">
+      <aside className="fixed inset-y-0 left-0 z-20 hidden w-64 border-r border-[#E5E7EB] bg-white px-4 py-5 lg:flex lg:flex-col">
+        <div className="mb-8 px-2">
+          <p className="text-xs font-medium uppercase tracking-[0.2em] text-[#6B7280]">Asset Tracker</p>
+          <h1 className="mt-2 text-xl font-semibold text-[#111827]">资产工作台</h1>
+        </div>
+
+        <nav className="space-y-1">
+          {tabs.map((tab) => {
+            const Icon = tab.icon;
+            const active = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-sm font-medium ${
+                  active
+                    ? 'bg-[#1F3A8A] text-white'
+                    : 'text-[#4B5563] hover:bg-[#F3F4F6] hover:text-[#111827]'
+                }`}
+              >
+                <Icon className="h-4 w-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="mt-auto border-t border-[#E5E7EB] pt-4">
+          <p className="truncate px-2 text-xs text-[#6B7280]">{user.email}</p>
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="mt-2 flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm text-[#4B5563] hover:bg-[#F3F4F6]"
+          >
+            <LogOut className="h-4 w-4" />
+            退出登录
+          </button>
+        </div>
+      </aside>
+
+      <div className="lg:pl-64">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#E5E7EB] bg-white px-4 py-3 lg:hidden">
+          <span className="font-semibold">资产工作台</span>
+          <button type="button" onClick={handleSignOut} className="text-sm text-[#4B5563]">
+            退出
+          </button>
+        </div>
+        <div className="flex gap-1 border-b border-[#E5E7EB] bg-white px-2 py-2 lg:hidden">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex-1 rounded-md px-3 py-2 text-sm ${
+                activeTab === tab.id ? 'bg-[#1F3A8A] text-white' : 'text-[#4B5563]'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+        <main>{renderPage()}</main>
+      </div>
+    </div>
   );
 };
 

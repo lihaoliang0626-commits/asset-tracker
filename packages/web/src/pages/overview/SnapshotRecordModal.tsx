@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Modal, Button, Input, Select, Card } from '../../components/base';
-import { useSnapshotStore, useSettingsStore, useExchangeRateStore } from '../../stores';
+import { useSnapshotStore, useSettingsStore, useExchangeRateStore, useAuthStore } from '../../stores';
 import {
   AssetGroup,
   AssetType,
@@ -21,8 +21,6 @@ import {
   generateId,
   CurrencyInfo,
 } from '@asset-tracker/shared';
-
-const USER_ID = 'default';
 
 type ExchangeRateHelpers = {
   getRate: (fromCurrency: string, toCurrency: string) => Promise<ExchangeRate | null>;
@@ -147,6 +145,7 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const userId = useAuthStore(state => state.user?.id);
   const { createSnapshot, currentSnapshot, snapshots } = useSnapshotStore();
   const { settings } = useSettingsStore();
   const { getRate, isRateUpToDate, saveRate } = useExchangeRateStore();
@@ -217,6 +216,11 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
 
   // 保存快照
   const handleSubmit = async () => {
+    if (!userId) {
+      alert('请先登录');
+      return;
+    }
+
     if (assets.length === 0) {
       alert('请至少添加一个资产');
       return;
@@ -303,7 +307,7 @@ export const SnapshotRecordModal: React.FC<SnapshotRecordModalProps> = ({
       });
 
       await createSnapshot({
-        userId: USER_ID,
+        userId,
         baseCurrency,
         assets: assetGroups,
         date: recordDate,
