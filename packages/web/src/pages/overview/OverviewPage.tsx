@@ -124,6 +124,7 @@ export const OverviewPage: React.FC = () => {
 
   const assetGroups = currentSnapshot?.assets ?? [];
   const baseCurrency = settings?.baseCurrency || currentSnapshot?.baseCurrency || 'CNY';
+  const hasComparableSnapshot = snapshots.length > 1 && assetChange;
 
   return (
     <div className="pb-20">
@@ -158,13 +159,19 @@ export const OverviewPage: React.FC = () => {
             </div>
             {assetGroups.length === 0 ? (
               <div className="text-sm text-text-tertiary">暂无资产数据</div>
+            ) : !hasComparableSnapshot ? (
+              <div className="text-sm text-text-tertiary">首次记录，继续记录后显示变化</div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-text-tertiary">
-                <span>−</span>
-                <span className="tabular-nums">
-                  {formatCurrency(assetChange?.absoluteChange || 0, baseCurrency)}
+                <span className={assetChange.absoluteChange >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {assetChange.absoluteChange >= 0 ? '+' : '-'}
                 </span>
-                <span>(?)</span>
+                <span className="tabular-nums">
+                  {formatCurrency(Math.abs(assetChange.absoluteChange), baseCurrency)}
+                </span>
+                <span className="tabular-nums">
+                  ({assetChange.percentageChange >= 0 ? '+' : '-'}{Math.abs(assetChange.percentageChange).toFixed(1)}%)
+                </span>
               </div>
             )}
           </div>

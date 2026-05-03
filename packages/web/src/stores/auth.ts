@@ -26,17 +26,33 @@ export const useAuthStore = create<AuthState>((set) => ({
       return;
     }
 
+    const clearAuthHash = () => {
+      if (
+        typeof window !== 'undefined' &&
+        window.location.hash.includes('access_token=')
+      ) {
+        window.history.replaceState(
+          null,
+          document.title,
+          `${window.location.pathname}${window.location.search}`
+        );
+      }
+    };
+
     set({ isLoading: true, error: null });
     const { data, error } = await supabase.auth.getUser();
     if (error && error.name !== 'AuthSessionMissingError') {
+      clearAuthHash();
       set({ error: error.message, isLoading: false });
       return;
     }
 
     supabase.auth.onAuthStateChange((_event, session) => {
+      clearAuthHash();
       set({ user: session?.user || null, isLoading: false, error: null });
     });
 
+    clearAuthHash();
     set({ user: data.user || null, isLoading: false });
   },
 

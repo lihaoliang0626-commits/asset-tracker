@@ -295,7 +295,17 @@ export const SettingsPage: React.FC = () => {
               </div>
             </button>
 
-            <label className="block w-full cursor-pointer p-4 bg-[#F6F7F9] rounded-lg hover:bg-[#E5E7EB] transition-colors text-left">
+            <label
+              role="button"
+              tabIndex={0}
+              className="block w-full cursor-pointer p-4 bg-[#F6F7F9] rounded-lg hover:bg-[#E5E7EB] transition-colors text-left"
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  event.currentTarget.click();
+                }
+              }}
+            >
               <input
                 type="file"
                 accept="application/json,.json"
@@ -403,9 +413,9 @@ export const SettingsPage: React.FC = () => {
           <div>
             <h4 className="font-semibold text-[#1F2933] mb-2">隐私保护</h4>
             <ul className="list-disc list-inside space-y-1 text-sm text-[#6B7280]">
-              <li>数据完全存储在本地</li>
-              <li>不上传任何敏感信息</li>
-              <li>可选端到端加密备份</li>
+              <li>数据保存在你的 Supabase 云端数据库</li>
+              <li>通过登录账号隔离个人资产数据</li>
+              <li>支持 JSON 导出，便于自行备份</li>
             </ul>
           </div>
 
