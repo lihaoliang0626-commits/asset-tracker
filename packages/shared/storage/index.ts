@@ -2,8 +2,8 @@
  * Storage module - unified access to all storage layers
  */
 
-// Database
-export * from './db';
+// Supabase configuration
+export * from './supabase';
 
 // Snapshot storage
 export * from './snapshot';
@@ -17,11 +17,15 @@ export * from './exchange-rate';
 // Analytics cache storage
 export * from './analytics-cache';
 
+// Goal storage
+export * from './goal';
+
 // Re-export storage instances
 import { getSnapshotStorage } from './snapshot';
 import { getSettingsStorage, getPreferencesStorage } from './settings';
 import { getExchangeRateStorage } from './exchange-rate';
 import { getAnalyticsCacheStorage } from './analytics-cache';
+import { getGoalStorage } from './goal';
 
 /**
  * 存储层统一接口
@@ -32,6 +36,7 @@ export interface Storage {
   preferences: ReturnType<typeof getPreferencesStorage>;
   exchangeRates: ReturnType<typeof getExchangeRateStorage>;
   analyticsCache: ReturnType<typeof getAnalyticsCacheStorage>;
+  goals: ReturnType<typeof getGoalStorage>;
 }
 
 /**
@@ -44,6 +49,7 @@ export function getStorage(): Storage {
     preferences: getPreferencesStorage(),
     exchangeRates: getExchangeRateStorage(),
     analyticsCache: getAnalyticsCacheStorage(),
+    goals: getGoalStorage(),
   };
 }
 
@@ -51,8 +57,7 @@ export function getStorage(): Storage {
  * 初始化存储层
  */
 export async function initStorage(): Promise<void> {
-  const { initDB } = await import('./db');
-  await initDB();
+  return Promise.resolve();
 }
 
 /**
@@ -63,7 +68,6 @@ export async function clearAllData(): Promise<void> {
 
   await storage.snapshots.deleteAllByUserId('default');
   await storage.settings.delete('default');
-  await storage.exchangeRates.clear();
   await storage.analyticsCache.clearAll();
 }
 

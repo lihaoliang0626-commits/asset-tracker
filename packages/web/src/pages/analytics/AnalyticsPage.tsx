@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useAnalyticsStore, useSnapshotStore, useSettingsStore, useGoalStore } from '../../stores';
+import { useAnalyticsStore, useSnapshotStore, useSettingsStore, useGoalStore, useAuthStore } from '../../stores';
 import { Card, Button } from '../../components/base';
 import { LineChart, BarChart, DonutChart } from '../../components/charts';
 import { GoalTrendChart } from '../../components/goal';
@@ -18,12 +18,11 @@ import {
 import { getGoalStatus, formatGoalAmount, formatGoalMonth } from '@asset-tracker/shared';
 import { generateAssetSummary, AssetSummaryResult } from '../../utils/ai-summary';
 
-const USER_ID = 'default';
-
 /**
  * 数据分析页
  */
 export const AnalyticsPage: React.FC = () => {
+  const userId = useAuthStore(state => state.user?.id);
   const [selectedPeriod, setSelectedPeriod] = useState<AnalysisPeriod>('month');
   const [comparisonMode] = useState<'previous'>('previous');
 
@@ -50,10 +49,11 @@ export const AnalyticsPage: React.FC = () => {
 
   // 加载数据
   useEffect(() => {
-    loadSettings(USER_ID);
+    if (!userId) return;
+    loadSettings(userId);
     setPeriod(selectedPeriod);
-    analyze(USER_ID);
-  }, [selectedPeriod]);
+    analyze(userId);
+  }, [userId, selectedPeriod]);
 
   // 切换周期
   const handlePeriodChange = (period: AnalysisPeriod) => {
@@ -171,7 +171,7 @@ export const AnalyticsPage: React.FC = () => {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => analyze(USER_ID, true)}
+            onClick={() => userId && analyze(userId, true)}
             isLoading={isLoading}
           >
             刷新

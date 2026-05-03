@@ -187,5 +187,5 @@ export default {
   },
   plugins: [require("tailwindcss-animate")],
   // 浅色模式（默认）
-  darkMode: false,
+  darkMode: 'class',
 };

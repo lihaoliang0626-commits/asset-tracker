@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Plus, Target } from 'lucide-react';
-import { useSnapshotStore, useAnalyticsStore, useGoalStore, useSettingsStore } from '../../stores';
+import { useSnapshotStore, useAnalyticsStore, useGoalStore, useSettingsStore, useAuthStore } from '../../stores';
 import { Card, NumberDisplay, Button } from '../../components/base';
 import { LineChart, DonutChart } from '../../components/charts';
 import { Header } from '../../components/layout';
@@ -9,12 +9,11 @@ import { SnapshotRecordModal } from './SnapshotRecordModal';
 import { AssetDetailModal } from './AssetDetailModal';
 import { GoalProgressCard, GoalSetupModal } from '../../components/goal';
 
-const USER_ID = 'default'; // 临时使用默认用户ID
-
 /**
  * 总览页 - 简约大气设计
  */
 export const OverviewPage: React.FC = () => {
+  const userId = useAuthStore(state => state.user?.id);
   const [showRecordModal, setShowRecordModal] = useState(false);
   const [showGoalSetupModal, setShowGoalSetupModal] = useState(false);
   const [isEditingGoal, setIsEditingGoal] = useState(false);
@@ -50,42 +49,43 @@ export const OverviewPage: React.FC = () => {
 
   // 加载数据
   useEffect(() => {
-    loadSettings(USER_ID);
-    getLatestSnapshot(USER_ID);
-    loadSnapshots(USER_ID);
-    analyze(USER_ID);
-    loadGoals(USER_ID);
-  }, []);
+    if (!userId) return;
+    loadSettings(userId);
+    getLatestSnapshot(userId);
+    loadSnapshots(userId);
+    analyze(userId);
+    loadGoals(userId);
+  }, [userId]);
 
   // 当快照更新时，刷新目标进度
   useEffect(() => {
-    if (currentSnapshot && activeGoal) {
-      refreshProgress(USER_ID, currentSnapshot, snapshots);
+    if (userId && currentSnapshot && activeGoal) {
+      refreshProgress(userId, currentSnapshot, snapshots);
     }
-  }, [currentSnapshot, snapshots, activeGoal]);
+  }, [userId, currentSnapshot, snapshots, activeGoal]);
 
   // 切换周期
   const handlePeriodChange = (period: 'week' | 'month') => {
     setSelectedPeriod(period);
     setPeriod(period);
-    analyze(USER_ID);
+    if (userId) analyze(userId);
   };
 
   // 创建或更新目标
-  const handleCreateGoal = (input: Omit<import('@asset-tracker/shared').CreateGoalInput, 'userId'>) => {
-    if (!currentSnapshot) return;
+  const handleCreateGoal = async (input: Omit<import('@asset-tracker/shared').CreateGoalInput, 'userId'>) => {
+    if (!userId || !currentSnapshot) return;
 
     if (isEditingGoal && activeGoal) {
       // 编辑模式：更新现有目标
-      updateGoal({
+      await updateGoal({
         id: activeGoal.id,
         ...input,
       });
     } else {
       // 创建模式：创建新目标
-      createGoal(
+      await createGoal(
         {
-          userId: USER_ID,
+          userId,
           ...input,
         },
         currentSnapshot
@@ -93,7 +93,7 @@ export const OverviewPage: React.FC = () => {
     }
 
     // 刷新进度
-    refreshProgress(USER_ID, currentSnapshot, snapshots);
+    refreshProgress(userId, currentSnapshot, snapshots);
 
     // 重置编辑状态
     setIsEditingGoal(false);
@@ -124,6 +124,7 @@ export const OverviewPage: React.FC = () => {
 
   const assetGroups = currentSnapshot?.assets ?? [];
   const baseCurrency = settings?.baseCurrency || currentSnapshot?.baseCurrency || 'CNY';
+  const hasComparableSnapshot = snapshots.length > 1 && assetChange;
 
   return (
     <div className="pb-20">
@@ -158,13 +159,19 @@ export const OverviewPage: React.FC = () => {
             </div>
             {assetGroups.length === 0 ? (
               <div className="text-sm text-text-tertiary">暂无资产数据</div>
+            ) : !hasComparableSnapshot ? (
+              <div className="text-sm text-text-tertiary">首次记录，继续记录后显示变化</div>
             ) : (
               <div className="flex items-center gap-2 text-sm text-text-tertiary">
-                <span>−</span>
-                <span className="tabular-nums">
-                  {formatCurrency(assetChange?.absoluteChange || 0, baseCurrency)}
+                <span className={assetChange.absoluteChange >= 0 ? 'text-green-600' : 'text-red-600'}>
+                  {assetChange.absoluteChange >= 0 ? '+' : '-'}
                 </span>
-                <span>(?)</span>
+                <span className="tabular-nums">
+                  {formatCurrency(Math.abs(assetChange.absoluteChange), baseCurrency)}
+                </span>
+                <span className="tabular-nums">
+                  ({assetChange.percentageChange >= 0 ? '+' : '-'}{Math.abs(assetChange.percentageChange).toFixed(1)}%)
+                </span>
               </div>
             )}
           </div>
@@ -293,9 +300,10 @@ export const OverviewPage: React.FC = () => {
           onClose={() => setShowRecordModal(false)}
           onSuccess={() => {
             setShowRecordModal(false);
-            getLatestSnapshot(USER_ID);
-            loadSnapshots(USER_ID);
-            analyze(USER_ID, true);
+            if (!userId) return;
+            getLatestSnapshot(userId);
+            loadSnapshots(userId);
+            analyze(userId, true);
           }}
         />
       )}

@@ -26,16 +26,6 @@ type GenerateAssetSummaryInput = {
   notes?: { date: string; note: string }[];
 };
 
-const DEFAULT_BASE_URL = 'https://api.deepseek.com';
-
-function getBaseUrl() {
-  return import.meta.env.VITE_DEEPSEEK_BASE_URL || DEFAULT_BASE_URL;
-}
-
-function getApiKey() {
-  return import.meta.env.VITE_DEEPSEEK_API_KEY;
-}
-
 function buildPrompt(input: GenerateAssetSummaryInput) {
   return `
 请根据以下资产变化数据，生成本期总结。
@@ -118,35 +108,24 @@ export async function generateAssetSummary(
   input: GenerateAssetSummaryInput,
   signal?: AbortSignal
 ): Promise<AssetSummaryResult> {
-  const apiKey = getApiKey();
-  if (!apiKey) {
-    throw new Error('Missing VITE_DEEPSEEK_API_KEY');
-  }
-
-  const response = await fetch(`${getBaseUrl()}/chat/completions`, {
+  const response = await fetch('/api/asset-summary', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        { role: 'system', content: '你是资深的个人财务分析助手，擅长从资产数据中发现洞察。' },
-        { role: 'user', content: buildPrompt(input) },
-      ],
-      stream: false,
-      temperature: 0.6,
+      prompt: buildPrompt(input),
     }),
     signal,
   });
 
   if (!response.ok) {
-    throw new Error(`DeepSeek API error: ${response.status}`);
+    const message = await response.text();
+    throw new Error(message || `AI summary error: ${response.status}`);
   }
 
   const data = await response.json();
-  const content = data?.choices?.[0]?.message?.content?.trim();
+  const content = data?.content?.trim();
   if (!content) {
     throw new Error('DeepSeek API returned empty content');
   }

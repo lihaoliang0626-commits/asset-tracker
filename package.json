@@ -2,12 +2,10 @@
   "name": "asset-tracker",
   "version": "1.1.0",
   "private": true,
-  "description": "Asset tracking application with web and mobile support",
+  "description": "Web-first asset tracking application with Supabase cloud storage",
   "scripts": {
     "dev:web": "pnpm --filter web dev",
-    "dev:mobile": "pnpm --filter mobile start",
     "build:web": "pnpm --filter web build",
-    "build:mobile": "pnpm --filter mobile build",
     "lint": "pnpm -r lint",
     "type-check": "pnpm -r type-check"
   },
